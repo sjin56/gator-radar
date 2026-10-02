@@ -1,4 +1,5 @@
 import { addDays, daysBetween, formatDate, formatTime, weekday } from "./dates";
+import { notScheduledReason } from "./opportunities";
 import type {
   CatchRecord, Category, Commitment, Discovery, Goal, Opportunity, PlanScore,
 } from "./types";
@@ -36,11 +37,12 @@ export type Plan = {
 };
 
 /** How strongly each Weekly Goal values each category (0-10). */
-export const GOAL_WEIGHTS: Record<Goal, Record<Category, number>> = {
-  career: { Research: 10, Career: 10, Scholarship: 9, Competition: 8, "Student Life": 4, Volunteering: 3, Wellness: 2 },
-  social: { "Student Life": 10, Volunteering: 9, Wellness: 9, Competition: 5, Career: 4, Research: 3, Scholarship: 3 },
-  balanced: { Research: 7, Career: 7, Scholarship: 6, Competition: 6, "Student Life": 7, Volunteering: 7, Wellness: 8 },
+export const GOAL_WEIGHTS: Record<Goal, Record<string, number>> = {
+  career: { Career: 10, "Research / Academic": 9, "AI / Technology": 9, Academic: 7, Healthcare: 5, "Student Life": 4, Wellness: 3, "Outdoor / Recreation": 3, Fitness: 2, Sports: 2 },
+  social: { "Student Life": 10, Sports: 9, Fitness: 8, Wellness: 8, "Outdoor / Recreation": 8, Healthcare: 4, "AI / Technology": 4, Career: 4, Academic: 3, "Research / Academic": 3 },
+  balanced: { Career: 7, "Research / Academic": 7, "AI / Technology": 7, Academic: 7, Healthcare: 7, "Student Life": 7, Wellness: 7, "Outdoor / Recreation": 7, Fitness: 6, Sports: 6 },
 };
+const goalWeight = (g: Goal, c: Category) => GOAL_WEIGHTS[g][c] ?? 5;
 
 const PREP_LEN = 60;
 const DAY_START = 9 * 60;
@@ -136,12 +138,15 @@ export function planWeek(opts: {
   let otherNotFit = 0;
 
   type Cand = { opp: Opportunity; origin: Origin; final: number };
-  const score = (o: Opportunity) => scores[o.id]?.score ?? 40;
-  const final = (o: Opportunity) => 0.5 * score(o) + 6 * GOAL_WEIGHTS[goal][o.category];
-  const reasonOf = (o: Opportunity) => scores[o.id]?.reason || o.description.split(". ")[0] + ".";
+  const score = (o: Opportunity) => scores[o.scoreKey]?.score ?? 40;
+  const final = (o: Opportunity) => 0.5 * score(o) + 6 * goalWeight(goal, o.category);
+  const reasonOf = (o: Opportunity) => scores[o.scoreKey]?.reason || o.description.split(". ")[0] + ".";
 
   // 1. Hard feasibility (week, deadline, status, fixed commitments + commute)
   const hardReason = (o: Opportunity): string | null => {
+    if (!o.schedulable || !o.recommendable) return notScheduledReason(o);
+    if (o.kind === "event" && o.date && o.date < today) return `Already happened (${formatDate(o.date)}).`;
+    if (o.kind === "event" && o.date === today && (o.start ?? 0) <= nowMinutes) return "Already started today.";
     if (o.kind === "event") return eventBlocker(o, blocks, weekStart, commute);
     if (catches[o.id]?.status === "Applied") return "You marked this as Applied, so no preparation time is needed.";
     const dl = o.deadline!;
@@ -194,9 +199,11 @@ export function planWeek(opts: {
 
   const take = (pool: Cand[], count: number) => {
     let placed = 0;
-    const penalty = goal === "balanced" ? 18 : 4;
+    const penalty = goal === "balanced" ? 14 : 8; // soft category diversity so fitness cannot drown out everything else
     while (placed < count && selected.length < N && pool.length) {
-      const adj = (c: Cand) => c.final - penalty * selected.filter((s) => s.opp.category === c.opp.category).length;
+      const adj = (c: Cand) =>
+        c.final - penalty * selected.filter((s) => s.opp.category === c.opp.category).length -
+        25 * selected.filter((s) => s.opp.seriesId && s.opp.seriesId === c.opp.seriesId).length;
       pool.sort((a, b) => adj(b) - adj(a));
       const c = pool.shift()!;
       const fail = tryPlace(c);

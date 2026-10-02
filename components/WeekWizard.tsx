@@ -6,6 +6,7 @@ import { addDays, formatDate, formatTime, mondayOf } from "@/lib/dates";
 import { planWeek, type Block, type Origin } from "@/lib/planner";
 import { useStore } from "@/lib/store";
 import { fmtWait, fmtWhen } from "@/components/Discover";
+import { DATASET_ID, PERIOD } from "@/lib/opportunities";
 import { fallbackPlanScores } from "@/lib/planAI";
 import type { Discovery, Goal, PlanScores, RecsResult } from "@/lib/types";
 
@@ -13,9 +14,9 @@ const HOUR_START = 8;
 const HOUR_END = 20;
 const PX = 52;
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
-const CACHE_KEY = "gr.plans.v1";
+const CACHE_KEY = `gr.plans.${DATASET_ID}`;
 const PREF_KEY = "gr.wizard.v1";
-const LAST_KEY = "gr.plan.last.v1";
+const LAST_KEY = `gr.plan.last.${DATASET_ID}`;
 
 const DISCOVERY: { id: Discovery; icon: string; title: string; desc: string }[] = [
   { id: "mycatch", icon: "♥", title: "Prioritize My Catch", desc: "Your saved picks come first; a few new ideas are mixed in." },
@@ -54,7 +55,9 @@ export function WeekWizard() {
   const { today, nowMinutes, profile, saveProfile, catches, opportunities, setView, genuineRecs, cooldownLeft, startCooldown } = useStore();
   const [discovery, setDiscovery] = useState<Discovery>("mycatch");
   const [goal, setGoal] = useState<Goal>("balanced");
-  const [offset, setOffset] = useState(1);
+  const firstWeek = mondayOf(PERIOD.start);
+  const lastWeek = mondayOf(PERIOD.end);
+  const [weekStart, setWeekStart] = useState(() => mondayOf(today > PERIOD.start ? today : PERIOD.start));
   const [state, setState] = useState<ScoreState>({ status: "idle" });
   const memo = useRef<Record<string, PlanScores>>({});
   const inflight = useRef(false);
@@ -74,10 +77,9 @@ export function WeekWizard() {
     } catch {}
   };
 
-  const weekStart = addDays(mondayOf(today), offset * 7);
   const caughtIds = Object.keys(catches).sort();
   const key = JSON.stringify([
-    profile.interests, profile.academicFocus, profile.careerGoals, profile.commitments,
+    DATASET_ID, profile.interests, profile.academicFocus, profile.careerGoals, profile.commitments,
     profile.commuteMinutes, profile.weeklyActivities, discovery, goal, weekStart, caughtIds,
   ]);
 
@@ -120,7 +122,7 @@ export function WeekWizard() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          profile, discovery, goal, weekOffset: offset,
+          profile, discovery, goal, weekStart,
           caught: Object.fromEntries(Object.entries(catches).map(([id, c]) => [id, c.status])),
         }),
       });
@@ -225,9 +227,9 @@ export function WeekWizard() {
             </select>
           </label>
           <div className="flex items-center gap-2 text-sm">
-            <button onClick={() => setOffset(offset - 1)} aria-label="Previous week" className="rounded-full border border-lav-300 px-3 py-2 hover:bg-lav-100">←</button>
+            <button onClick={() => setWeekStart(addDays(weekStart, -7))} disabled={weekStart <= firstWeek} aria-label="Previous week" className="rounded-full border border-lav-300 px-3 py-2 hover:bg-lav-100 disabled:opacity-40">←</button>
             <span className="min-w-36 text-center font-semibold text-plum-900">{formatDate(weekStart)} – {formatDate(addDays(weekStart, 4))}</span>
-            <button onClick={() => setOffset(offset + 1)} aria-label="Next week" className="rounded-full border border-lav-300 px-3 py-2 hover:bg-lav-100">→</button>
+            <button onClick={() => setWeekStart(addDays(weekStart, 7))} disabled={weekStart >= lastWeek} aria-label="Next week" className="rounded-full border border-lav-300 px-3 py-2 hover:bg-lav-100 disabled:opacity-40">→</button>
           </div>
           <button
             onClick={generate} disabled={state.status === "loading"}
@@ -368,6 +370,7 @@ export function WeekWizard() {
                     </div>
                     <h3 className="mt-2 font-bold text-plum-900">{s.opp.title}</h3>
                     <p className="text-sm text-slate-700">{s.reason}</p>
+                    {s.opp.reviewFlags[0] && <p className="mt-1 text-xs font-medium text-[#6b4a00]">Verify: {s.opp.reviewFlags[0]}</p>}
                     <p className="mt-1 text-xs text-slate-500">
                       {s.opp.kind === "event"
                         ? `Official time: ${formatDate(s.opp.date!, { weekday: "short", month: "short", day: "numeric" })}, ${formatTime(s.opp.start!)}–${formatTime(s.opp.end!)}`
@@ -390,7 +393,7 @@ export function WeekWizard() {
               <ul className="space-y-2">
                 {plan.skipped.map((u) => (
                   <li key={u.opp.id} className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-900">
-                    <strong>♥ {u.opp.title}:</strong> {u.reason}
+                    <strong>♥ {u.opp.title}{u.opp.date ? ` (${formatDate(u.opp.date)})` : ""}:</strong> {u.reason}
                   </li>
                 ))}
               </ul>
@@ -402,7 +405,7 @@ export function WeekWizard() {
         </>
       )}
       <p className="text-xs text-slate-500">
-        Opportunities are fictional demo records, not verified SFSU listings. Official event times are never changed; commute buffers and a 2-activities-per-day free-time guard are applied by fixed rules.
+        Listings are a manually curated snapshot of SFSU events for Oct 5–16, 2026 (not live, not individually verified). Official event times are never changed; commute buffers and a 2-activities-per-day free-time guard are applied by fixed rules.
       </p>
     </div>
   );

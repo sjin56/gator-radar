@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { DemoNote, OpportunityCard, SectionTitle } from "@/components/ui";
 import { useStore } from "@/lib/store";
-import { CATEGORIES, type Category, type Opportunity } from "@/lib/types";
+import type { Category, Opportunity } from "@/lib/types";
 
 export function fmtWait(s: number) {
   if (s >= 3600) return `${Math.floor(s / 3600)}h ${Math.round((s % 3600) / 60)}m`;
@@ -73,15 +73,29 @@ export function useRankedRecs() {
   const { recs, opportunities } = useStore();
   return useMemo(() => {
     if (!recs) return [];
-    const byId = new Map(opportunities.map((o) => [o.id, o]));
+    const byId = new Map<string, Opportunity>();
+    for (const o of opportunities) if (o.recommendable && !byId.has(o.scoreKey)) byId.set(o.scoreKey, o);
     return recs.result.recommendations
       .map((r) => ({ rec: r, opp: byId.get(r.id) }))
       .filter((x): x is { rec: typeof x.rec; opp: Opportunity } => Boolean(x.opp));
   }, [recs, opportunities]);
 }
 
+/** Soft category diversity: many fitness sessions must not crowd out career, academic and social picks. */
+export function topDiverse<T extends { rec: { score: number }; opp: { category: string } }>(ranked: T[], n: number): T[] {
+  const pool = [...ranked];
+  const out: T[] = [];
+  while (out.length < n && pool.length) {
+    const adj = (x: T) => x.rec.score - 18 * out.filter((o) => o.opp.category === x.opp.category).length;
+    pool.sort((a, b) => adj(b) - adj(a));
+    out.push(pool.shift()!);
+  }
+  return out;
+}
+
 export function PopularThisWeek({ limit = 3 }: { limit?: number }) {
   const { opportunities, countFor, countsMode } = useStore();
+  if (countsMode !== "firestore") return null; // no fabricated popularity in production
   const ranked = [...opportunities].sort((a, b) => countFor(b.id).week - countFor(a.id).week).slice(0, limit);
   return (
     <section>
@@ -92,7 +106,7 @@ export function PopularThisWeek({ limit = 3 }: { limit?: number }) {
             : "Illustrative demo numbers — the shared database is not connected, so these are NOT real community activity."
         }
       >
-        Popular This Week {countsMode === "demo" && <span className="align-middle text-xs font-semibold text-[#7a5600]">(demo data)</span>}
+        Popular This Week
       </SectionTitle>
       <ol className="grid gap-3 md:grid-cols-3">
         {ranked.map((o, i) => (
@@ -112,7 +126,8 @@ export function Discover() {
   const ranked = useRankedRecs();
   const [cat, setCat] = useState<Category | "All">("All");
   const [kind, setKind] = useState<"all" | "event" | "application">("all");
-  const all = opportunities.filter((o) => (cat === "All" || o.category === cat) && (kind === "all" || o.kind === kind));
+  const seenSeries = new Set<string>();
+  const all = opportunities.filter((o) => (o.seriesId ? (seenSeries.has(o.seriesId) ? false : (seenSeries.add(o.seriesId), true)) : true)).filter((o) => (cat === "All" || o.category === cat) && (kind === "all" || o.kind === kind));
   return (
     <div className="space-y-10">
       <header>
@@ -125,7 +140,7 @@ export function Discover() {
       <section>
         <SectionTitle>Recommended For You</SectionTitle>
         <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {ranked.slice(0, 3).map(({ opp, rec }) => (
+          {topDiverse(ranked, 3).map(({ opp, rec }) => (
             <OpportunityCard key={opp.id} o={opp} rec={rec} />
           ))}
         </div>
@@ -134,10 +149,10 @@ export function Discover() {
       <section>
         <SectionTitle>Explore All Opportunities</SectionTitle>
         <div className="mb-4 flex flex-wrap gap-2" role="group" aria-label="Filters">
-          {(["All", ...CATEGORIES] as const).map((c) => (
+          {(["All", ...Array.from(new Set(opportunities.map((o) => o.category)))] as string[]).map((c) => (
             <button
               key={c}
-              onClick={() => setCat(c)}
+              onClick={() => setCat(c as Category | "All")}
               aria-pressed={cat === c}
               className={`rounded-full border px-3 py-1 text-sm font-semibold ${cat === c ? "border-plum-800 bg-plum-800 text-white" : "border-lav-300 bg-white text-plum-800 hover:bg-lav-100"}`}
             >
@@ -161,7 +176,7 @@ export function Discover() {
         ) : (
           <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
             {all.map((o) => (
-              <OpportunityCard key={o.id} o={o} rec={ranked.find((r) => r.opp.id === o.id)?.rec} />
+              <OpportunityCard key={o.id} o={o} rec={ranked.find((r) => r.opp.scoreKey === o.scoreKey)?.rec} />
             ))}
           </div>
         )}

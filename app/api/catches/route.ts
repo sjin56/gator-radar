@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { laNow, mondayOf } from "@/lib/dates";
-import { buildOpportunities, DEMO_COUNTS } from "@/lib/opportunities";
+import { buildOpportunities } from "@/lib/opportunities";
+
+/** No fabricated popularity: without the shared database there are simply no counts. */
+const DEMO_COUNTS: Record<string, { total: number; week: number }> = {};
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

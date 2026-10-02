@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { laNow } from "./dates";
 import { DEMO_PROFILE, isDemoProfile, recsSignature } from "./demoProfile";
-import { buildOpportunities, DEMO_COUNTS } from "./opportunities";
+import { buildOpportunities, DATASET_ID } from "./opportunities";
 import { asFallback } from "./recommend";
 import { DEMO_RECS_SNAPSHOT } from "./snapshot";
 import type { CatchRecord, CatchStatus, Opportunity, Profile, RecsResult } from "./types";
@@ -59,7 +59,7 @@ export const useStore = () => {
 
 const K = {
   profile: "gr.profile.v1", catches: "gr.catches.v1", visitor: "gr.visitor.v1",
-  recs: "gr.recs.v2", lastRecs: "gr.recs.last.v1", cool: "gr.cooldown.v1",
+  recs: `gr.recs.${DATASET_ID}`, lastRecs: `gr.recs.last.${DATASET_ID}`, cool: "gr.cooldown.v1",
 };
 const MAX_COOLDOWN_S = 3 * 3600;
 
@@ -101,7 +101,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [recsLoading, setRecsLoading] = useState(false);
   const [cooldownUntil, setCooldownUntil] = useState(0);
   const [tick, setTick] = useState(0);
-  const [counts, setCounts] = useState<Counts>(DEMO_COUNTS);
+  const [counts, setCounts] = useState<Counts>({});
   const [countsMode, setCountsMode] = useState<"firestore" | "demo">("demo");
   const visitorId = useRef("");
   const catchesRef = useRef<Record<string, CatchRecord>>({});
@@ -142,7 +142,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setToday(n.date);
     setNowMinutes(n.minutes);
     setProfile({ ...DEMO_PROFILE, ...read<Partial<Profile>>(K.profile, {}) });
-    const saved = read<Record<string, CatchRecord>>(K.catches, {});
+    // drop catches that belong to the retired fictional dataset
+    const known = new Set(buildOpportunities().map((o) => o.id));
+    const saved = Object.fromEntries(Object.entries(read<Record<string, CatchRecord>>(K.catches, {})).filter(([id]) => known.has(id)));
+    write(K.catches, saved);
     catchesRef.current = saved;
     setCatches(saved);
     setCooldownUntil(read<number>(K.cool, 0));
@@ -151,7 +154,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     loadCounts();
   }, [loadCounts]);
 
-  const keyFor = (p: Profile, date: string) => JSON.stringify([recsSignature(p), date]);
+  const keyFor = (p: Profile, _date: string) => JSON.stringify([DATASET_ID, recsSignature(p)]);
 
   /** Choose what to show WITHOUT any network call. */
   const resolveRecs = useCallback(

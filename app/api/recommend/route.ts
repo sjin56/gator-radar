@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { laNow } from "@/lib/dates";
 import { runGemini } from "@/lib/gemini";
-import { buildOpportunities } from "@/lib/opportunities";
+import { buildOpportunities, DATASET_ID } from "@/lib/opportunities";
 import { asFallback, buildPrompt, validateRecs } from "@/lib/recommend";
 import { sanitizeProfile } from "@/lib/sanitize";
 import type { Recommendation, RecsResult } from "@/lib/types";
@@ -42,7 +42,7 @@ export async function POST(req: Request) {
   const out = await runGemini<Recommendation[]>({
     key, system, user, schema: SCHEMA, temperature: 0.3, timeoutMs: 14000,
     // identical profiles on the same day share one Gemini result (protects the free daily quota)
-    cacheKey: JSON.stringify(["recs", profile.interests, profile.academicFocus, profile.careerGoals, profile.commitments, now.date]),
+    cacheKey: JSON.stringify([DATASET_ID, "recs", profile.interests, profile.academicFocus, profile.careerGoals, profile.commitments]),
     parse: (raw) => {
       const recs = validateRecs(raw, opportunities);
       return recs.length ? recs : null;

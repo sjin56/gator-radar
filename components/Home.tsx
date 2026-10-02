@@ -1,6 +1,6 @@
 "use client";
 
-import { PopularThisWeek, RecsBanner, useRankedRecs } from "@/components/Discover";
+import { PopularThisWeek, RecsBanner, topDiverse, useRankedRecs } from "@/components/Discover";
 import { RadarMark } from "@/components/Shell";
 import { DemoNote, OpportunityCard, SectionTitle } from "@/components/ui";
 import { useStore } from "@/lib/store";
@@ -86,7 +86,7 @@ export function Home() {
         <SectionTitle sub="Top matches for your profile, with the reason behind each one.">Recommended For You</SectionTitle>
         <RecsBanner />
         <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {ranked.slice(0, 3).map(({ opp, rec }) => <OpportunityCard key={opp.id} o={opp} rec={rec} />)}
+          {topDiverse(ranked, 3).map(({ opp, rec }) => <OpportunityCard key={opp.id} o={opp} rec={rec} />)}
         </div>
         <div className="flex flex-wrap gap-3">
           <button onClick={() => setView("discover")} className="rounded-full bg-plum-800 px-5 py-2.5 text-sm font-bold text-white hover:bg-plum-700">See all opportunities</button>

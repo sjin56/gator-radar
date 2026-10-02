@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { addDays, laNow, mondayOf } from "@/lib/dates";
+import { laNow, mondayOf, weekday } from "@/lib/dates";
 import { runGemini } from "@/lib/gemini";
-import { buildOpportunities } from "@/lib/opportunities";
+import { buildOpportunities, DATASET_ID, PERIOD, scoringItems } from "@/lib/opportunities";
 import { buildPlanPrompt, fallbackPlanScores, validatePlanScores } from "@/lib/planAI";
 import { sanitizeProfile } from "@/lib/sanitize";
 import type { Discovery, Goal, PlanScore, PlanScores } from "@/lib/types";
@@ -36,8 +36,9 @@ export async function POST(req: Request) {
     ? (body.discovery as Discovery) : "mycatch";
   const goal: Goal = (["career", "social", "balanced"] as const).includes(body.goal as Goal) ? (body.goal as Goal) : "balanced";
   const now = laNow();
-  const weekOffset = Number(body.weekOffset) === 0 ? 0 : 1;
-  const weekStart = addDays(mondayOf(now.date), weekOffset * 7);
+  const asked = String(body.weekStart ?? "");
+  const validWeek = /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(asked) && weekday(asked) === 1 && asked >= mondayOf(PERIOD.start) && asked <= PERIOD.end;
+  const weekStart = validWeek ? asked : mondayOf(now.date > PERIOD.start ? now.date : PERIOD.start);
   const opportunities = buildOpportunities(now.date);
   const known = new Set(opportunities.map((o) => o.id));
   const caught: Record<string, string> = {};
@@ -50,10 +51,10 @@ export async function POST(req: Request) {
   const { system, user } = buildPlanPrompt({ profile, discovery, goal, caught, weekStart, today: now.date, opportunities });
   const out = await runGemini<PlanScore[]>({
     key, system, user, schema: SCHEMA, temperature: 0.4, timeoutMs: 20000,
-    cacheKey: JSON.stringify(["plan", profile, discovery, goal, weekStart, Object.entries(caught).sort()]),
+    cacheKey: JSON.stringify([DATASET_ID, "plan", profile, discovery, goal, weekStart, Object.entries(caught).sort()]),
     parse: (raw) => {
       const items = validatePlanScores(raw, opportunities);
-      return items.length >= Math.ceil(opportunities.length / 2) ? items : null;
+      return items.length >= Math.ceil(scoringItems(opportunities).length / 2) ? items : null;
     },
   });
   if (out.ok) {

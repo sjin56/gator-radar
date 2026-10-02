@@ -4,9 +4,7 @@ export const INTERESTS = [
 ] as const;
 export type Interest = (typeof INTERESTS)[number];
 
-export type Category =
-  | "Research" | "Career" | "Scholarship" | "Wellness" | "Student Life" | "Volunteering" | "Competition";
-export const CATEGORIES: Category[] = ["Research", "Career", "Scholarship", "Competition", "Wellness", "Student Life", "Volunteering"];
+export type Category = string;
 
 export type Opportunity = {
   id: string;
@@ -29,6 +27,16 @@ export type Opportunity = {
   verified: boolean;
   /** applications: number of suggested 60-minute prep blocks */
   prepSessions?: number;
+  /** real-data pilot fields */
+  schedulable: boolean; // exact fixed start AND end known, no special ambiguity
+  recommendable: boolean; // eligible for AI recommendations and automatic planning
+  verification: string; // dataset verificationStatus
+  reviewFlags: string[];
+  seriesId?: string; // recurring fitness class across dates
+  scoreKey: string; // seriesId when present, else id; Gemini scores are keyed by this
+  dropIn?: boolean;
+  startOnly?: boolean; // only a start time is listed
+  registrationDeadline?: string;
 };
 
 export type Commitment = {
