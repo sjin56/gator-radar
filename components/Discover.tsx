@@ -126,8 +126,14 @@ export function Discover() {
   const ranked = useRankedRecs();
   const [cat, setCat] = useState<Category | "All">("All");
   const [kind, setKind] = useState<"all" | "event" | "application">("all");
+  const [fitOpen, setFitOpen] = useState(false);
   const seenSeries = new Set<string>();
   const all = opportunities.filter((o) => (o.seriesId ? (seenSeries.has(o.seriesId) ? false : (seenSeries.add(o.seriesId), true)) : true)).filter((o) => (cat === "All" || o.category === cat) && (kind === "all" || o.kind === kind));
+  const regular = all.filter((o) => o.category !== "Fitness");
+  const fitness = all.filter((o) => o.category === "Fitness");
+  // Default view: one collapsed Group Fitness collection. Choosing the Fitness filter shows the classes directly.
+  const showFitnessCollection = cat === "All" && fitness.length > 0;
+  const showFitnessCards = cat === "Fitness" || (showFitnessCollection && fitOpen);
   return (
     <div className="space-y-10">
       <header>
@@ -174,10 +180,39 @@ export function Discover() {
         {all.length === 0 ? (
           <p className="text-slate-600">No opportunities match these filters.</p>
         ) : (
-          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-            {all.map((o) => (
-              <OpportunityCard key={o.id} o={o} rec={ranked.find((r) => r.opp.scoreKey === o.scoreKey)?.rec} />
-            ))}
+          <div className="space-y-6">
+            {regular.length > 0 && (
+              <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+                {regular.map((o) => (
+                  <OpportunityCard key={o.id} o={o} rec={ranked.find((r) => r.opp.scoreKey === o.scoreKey)?.rec} />
+                ))}
+              </div>
+            )}
+            {showFitnessCollection && (
+              <div className="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-lav-200 bg-gradient-to-r from-lav-100 to-white p-6 shadow-[0_2px_14px_rgba(76,47,160,0.08)]">
+                <div className="min-w-0 max-w-2xl">
+                  <h3 className="text-xl font-extrabold text-plum-900">Group Fitness</h3>
+                  <p className="mt-1 text-sm text-slate-600">
+                    Explore Yoga, Pilates, Zumba, Cycling, Strength Training &amp; more at Mashouf Wellness Center.
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500">{fitness.length} weekly classes · {opportunities.filter((o) => o.category === "Fitness").length} dated sessions, Oct 5–16</p>
+                </div>
+                <button
+                  onClick={() => setFitOpen(!fitOpen)}
+                  aria-expanded={fitOpen}
+                  className="rounded-full bg-plum-800 px-5 py-2.5 text-sm font-bold text-white hover:bg-plum-700"
+                >
+                  {fitOpen ? "Hide Fitness Classes ▲" : "Browse Fitness Classes ▼"}
+                </button>
+              </div>
+            )}
+            {showFitnessCards && (
+              <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+                {fitness.map((o) => (
+                  <OpportunityCard key={o.id} o={o} rec={ranked.find((r) => r.opp.scoreKey === o.scoreKey)?.rec} />
+                ))}
+              </div>
+            )}
           </div>
         )}
       </section>
