@@ -1,49 +1,50 @@
-# ShipYard Submission Answers — Gator Radar (SFSU Track)
+# ShipYard Submission — Gator Radar (SFSU Track: Build for SFSU)
 
-**Live app:** https://gator-radar.vercel.app
+**Live website:** https://gator-radar.vercel.app
+**GitHub repository:** https://github.com/sjin56/gator-radar (private until approved for public)
 
-## Project Name and Tagline
-**Gator Radar** — Discover. Catch. Plan.
+## Project name and tagline
+**Gator Radar**: Discover. Catch. Plan.
 
-## Project Overview
-Gator Radar is an AI-powered opportunity discovery and weekly planning web app for SFSU students. It surfaces campus events that match a student's interests and goals, lets them "catch" the ones they like, and builds a realistic Monday–Friday plan around their classes, commute and free time. The pilot runs on a manually curated snapshot of real SFSU listings for **Oct 5–16, 2026**.
+## The Problem
+SFSU opportunities (workshops, career events, wellness classes, student-life events) are scattered across many sites, PDFs and social accounts. Students find them too late, overlook programs that fit their goals, and struggle to fit them into a real class schedule. The builder, an international exchange student, nearly missed this hackathon's own registration deadline.
 
-## Problem Statement
-SFSU opportunities are scattered across many sites, PDFs and social accounts. Students find them too late, miss deadlines, overlook programs that match their goals, and struggle to fit them into a class schedule. I nearly missed this hackathon's own registration deadline.
+## What It Does
+Gator Radar helps SFSU students discover relevant campus events, save ("catch") the ones they like, and turn them into a realistic Monday–Friday plan.
+- **Student Profile:** interests, goals, recurring classes, commute minutes and weekly activity load, saved in the browser (a fictional demo student is prefilled).
+- **Discover:** 90 curated real listings for Oct 5–16, 2026, with Gemini-powered "Recommended For You" (a reason for each pick), category filters, schedule-conflict badges, and a Source & verification panel on every card. Recurring Campus Rec fitness classes are grouped, and each session can be caught individually.
+- **My Catch:** save and remove, status tracking, persists after refresh.
+- **Week Wizard:** an AI-guided planner over the whole dataset (it works even with an empty My Catch). Two independent controls: Discovery Preference (Prioritize My Catch / Balanced Discovery / Surprise Me!) and Weekly Goal (Career / Social / Balanced). It places events at their official times, applies commute buffers and a free-time guard, and explains every caught item it left out.
 
-## Target Users
-SFSU students, especially first-year, transfer and international/exchange students who do not yet know where to look.
+## How I Built It
+A Next.js + TypeScript + Tailwind app with server-side API routes, deployed on Vercel. The dataset is a manually curated JSON snapshot transcribed from the Campus Rec Fall 2026 fitness flyer, the SFSU Student Events Calendar PDF, GatorXperience event cards and a few official pages. Each record keeps its own verification status and review flags; listings without exact start and end times are information-only and never placed as fixed calendar blocks. Dates, conflicts, commute buffers and scheduling are deterministic code. Gemini output is validated against the real dataset. To live within the Gemini free tier (about 20 requests per day per model), the app never calls Gemini automatically, caches results in the browser and on the server, ships a clearly labeled genuine Gemini snapshot for the demo student, and shows a visible "Fallback — not AI" mode when no genuine result exists.
 
-## Main Features (implemented)
-- **Student Profile:** interests, goals, recurring classes, commute minutes and preferred weekly activity load, saved in the browser. A fictional demo student is prefilled.
-- **Discover:** 90 curated real listings (see data note). Gemini-powered "Recommended For You" with a reason for each pick, category filters, schedule-conflict badges, and a visible Source & verification panel on every card. The 51 recurring Campus Rec fitness sessions are grouped into 26 weekly classes, with each session catchable on its own.
-- **My Catch:** save/remove, status tracking, persists after refresh.
-- **Week Wizard:** AI-guided weekly planner over the whole dataset (works with an empty My Catch). Two independent controls: **Discovery Preference** (Prioritize My Catch / Balanced Discovery / Surprise Me!) and **Weekly Goal** (Career / Social / Balanced). Gemini scores listings; fixed rules place events at their official times, apply commute buffers and a free-time guard (max 2 activities/day), never move official times, never place listings flagged as not schedulable, and explain every caught item that did not fit.
+## Gemini's meaningful technical contribution
+Gemini is the relevance engine, not a chatbot. Server-side, it receives the student's interests, goals, class schedule and commute plus a closed list of real listings (each with verified-conflict labels computed by the app), and returns structured JSON: a 0–100 fit score and a short reason for every listing. The Week Wizard uses these scores together with the chosen Discovery Preference and Weekly Goal. Gemini cannot add listings, change times or invent deadlines, because every output ID is checked against the dataset and all calendar placement is done by fixed rules. Models tried in order: gemini-3.8-flash, gemini-3.5-flash, gemini-3.1-flash-lite (the demo snapshot came from gemini-3.1-flash-lite).
 
-## How AI Was Used
-Server-side Gemini scores every listing for the student and explains why (interests, career goals, verified schedule conflicts). Output is validated against the real dataset, so the model cannot invent listings, times or deadlines. Dates, conflicts, commute buffers and calendar placement are deterministic code. Because the free tier allows about 20 requests/day/model, the app never calls Gemini automatically; results are cached (browser and server), a clearly labeled genuine Gemini snapshot is shipped for the demo student, and a cooldown plus a visible "Fallback — not AI" mode protect honesty when no genuine result is available.
+## Technology stack
+Next.js (App Router), React, TypeScript, Tailwind CSS, Gemini API (server-side), browser localStorage, Vercel. Not used: Firestore, Cloud Run, authentication, scraping.
 
-## Data (what is real and what is not)
-- **Manually curated snapshot, not live crawling.** 90 records for Oct 5–16, 2026, transcribed from the Campus Recreation Fall 2026 Group Fitness flyer (51 dated sessions), the SFSU Student Events Calendar PDF, GatorXperience event-card screenshots and a few official Academic Technology / Career pages.
-- **Not individually verified.** Each record carries its own verification status and review flags. A listing proves what was published at capture time, not that a class runs on that date, that seats remain, or that every student is eligible. The UI shows these notes on each card.
-- **Respected flags:** 27 records (e.g., drop-in service windows, intramural league windows, listings with only a start time, the ORC Gear Demo with an inconsistent time) are shown as information only and are never placed as fixed calendar blocks. No end times, URLs, venues or eligibility rules were invented.
+## Responsible AI, privacy and data honesty
+- Profile, schedule and saved items stay in the browser by default. Only interests, academic focus, career goals, commitment titles/times and commute minutes go to Gemini through our server. No names, addresses or SFSU credentials. The API key is never exposed to the browser.
+- The listings are a **manually curated snapshot for Oct 5–16, 2026, not live crawling, and not individually verified**. A listing shows what was published at capture time, not that a class runs, has space, or fits every student's eligibility. The app labels this on each card and tells users to verify with the official source.
+- AI results are labeled by origin (live, saved, demo snapshot, or non-AI fallback) and can be imperfect.
 - No popularity numbers are shown, because no real cross-user data exists.
 
-## Technologies Actually Implemented
-Next.js (App Router), React, TypeScript, Tailwind CSS, Gemini API (server-side), browser localStorage, Vercel hosting. Not used: Firestore, Cloud Run, authentication, scraping.
+## Known limitations
+- Free-tier Gemini quota is limited; when exhausted the app shows the last genuine result or a labeled non-AI fallback.
+- Each new Discovery Preference × Weekly Goal combination costs one Gemini request the first time (then it is cached).
+- Fitness sessions are expanded from a recurring weekly flyer; individual dates may be cancelled or full.
 
-## Differentiation from Existing Event Platforms
-It is not another event calendar. It combines personalized AI discovery with planning: "Catch First, but Never Catch Only." The Week Wizard also surfaces things a student never saved, while respecting classes, commute and free time, and it explains what it left out.
+## Future Development
+1. Automated SFSU opportunity aggregation.
+2. Student and organization opportunity submissions (with moderation).
+3. AI-assisted information extraction and verification.
+4. Interactive "Customize My Week" editing.
+5. Shared catch counts and deadline notifications.
+6. Reusable Gemini scoring: make relevance scores independent of Discovery Preference, Weekly Goal and caught items, so one request per profile supports every planning combination built locally.
 
-## Responsible AI and Privacy Considerations
-Profile, schedule and saved items stay in the browser by default. Only interests, academic focus, career goals, commitment titles/times and commute minutes are sent to Gemini through our server (API key never exposed); no names, addresses or SFSU credentials. AI output is labeled by origin (live, saved, snapshot, or non-AI fallback), can be imperfect, and users are told to verify every listing with the official source.
-
-## Implemented vs. Curated Data vs. Future
-- **Implemented:** everything under Main Features.
-- **Curated snapshot:** the 90 listings (manual, Oct 5–16 only).
-- **Future (not implemented):** automated source aggregation (GatorXperience, department sites, student orgs) with human verification, student/community submissions with moderation, real cross-user catch counts, SFSU SSO and official class-schedule import, deadline reminders, manual editing of the generated week, and partnership with Campus Rec / Career Center for official feeds.
-
-## Known limitations (be upfront with judges)
-- Gemini free tier is limited; if the daily quota is used up, the app shows the last genuine result or a clearly labeled non-AI fallback.
-- The demo snapshot was generated by `gemini-3.1-flash-lite` on Oct 2 at 3:42 PM PT; live results may use a larger model when quota is available.
-- Listings can be cancelled or full; fitness sessions are expanded from a recurring weekly flyer.
+## Tags and track information
+- **Track:** SFSU Track (Build for SFSU)
+- **Tags:** SFSU, students, campus life, AI, Gemini, Next.js, TypeScript, Tailwind, Vercel, personalization, planning, responsible AI
+- **GDG track:** not claimed. Gator Radar was built for the SFSU Track and does not claim to satisfy GDG-specific requirements (it does not use Google Cloud services beyond the Gemini API).
