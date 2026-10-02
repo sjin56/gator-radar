@@ -21,16 +21,16 @@ SFSU students — especially first-year, transfer, and international/exchange st
 - Editable student profile (interests, goals, recurring classes), saved in the browser; demo student prefilled
 - Discover: Gemini-powered "Recommended For You" with reasons, category/type filters, deadline urgency + schedule-conflict badges
 - My Catch: save/remove, status tracking (Saved / Planning to Apply / Applied), days remaining, persists after refresh
-- Week Wizard: Mon–Fri planner with classes, events at official times, optional prep blocks before deadlines, no overlaps, explanations for what doesn't fit, Career/Social/Balanced variations
+- Week Wizard: AI-guided weekly planner over all opportunities (works with an empty My Catch). Discovery Preference (Prioritize My Catch / Balanced / Surprise Me!) and Weekly Goal (Career / Social / Balanced) independently change the plan. Gemini scores opportunities; deterministic code places official events at real times, applies commute buffers and a free-time guard, adds optional prep blocks before deadlines, and explains anything that did not fit
 - Popular This Week: **[CONFIRM]** shared Firestore catch counts if enabled; otherwise illustrative demo numbers clearly labeled as such
 
 ## How AI Was Used
-Gemini (server-side) receives the student's profile and a closed list of opportunities and returns structured JSON (id, score, reason)
+Gemini (server-side) powers both Discover recommendations and Week Wizard planning (it scores every opportunity for the chosen Discovery Preference and Weekly Goal). For recommendations it receives the student's profile and a closed list of opportunities and returns structured JSON (id, score, reason)
 explaining why each opportunity fits, considering interests, career goals and schedule. The server validates output against the real dataset,
 so the model can't invent opportunities, times, or deadlines. Dates and scheduling are deterministic code. If Gemini fails, the UI shows a clear non-AI fallback banner.
 
 ## Technologies Actually Implemented
-Next.js, React, TypeScript, Tailwind CSS, Gemini API, localStorage. **[CONFIRM]** Google Cloud Firestore (code written; list only if enabled and tested). **[CONFIRM]** Hosting: Vercel / Cloud Run (list only the one actually used).
+Next.js, React, TypeScript, Tailwind CSS, Gemini API (server-side), localStorage, Vercel hosting (https://gator-radar.vercel.app). **[CONFIRM]** Google Cloud Firestore (code written; list only if enabled and tested). **[CONFIRM]** Hosting: Vercel / Cloud Run (list only the one actually used).
 
 ## Differentiation from Existing Event Platforms
 Not another event calendar. It separates *events* (attend at a time) from *applications* (prepare before a deadline), personalizes with AI that explains its reasoning,
@@ -43,5 +43,5 @@ AI output is labeled and users are told to verify with official sources. Fallbac
 
 ## Implemented vs. Demo Data vs. Future
 - **Implemented:** everything under Main Features.
-- **Demo data:** all 8 opportunities are fictional sample records; no source URLs; no scraping.
+- **Demo data:** all 14 opportunities are fictional sample records; no source URLs; no scraping.
 - **Future:** verified ingestion from GatorXperience, department pages and student-org feeds (with human verification), SFSU SSO and class-schedule import, deadline reminders, partnership with Career Center / Student Life for official listings.

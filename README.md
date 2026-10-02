@@ -15,7 +15,7 @@ The builder almost missed the registration deadline for this very hackathon.
 - **Discover** – Gemini ranks opportunities for the student and explains *why*; category/type filters; deadline urgency badges; schedule-conflict badges.
 - **My Catch** – save/remove, status (Saved → Planning to Apply → Applied), days remaining. Persists across refresh.
 - **Popular This Week** – community "catch" counts. Uses Firestore if configured; otherwise **clearly labeled illustrative demo numbers**.
-- **Week Wizard** – Mon–Fri planner: classes, events at their *official* times, optional prep blocks before deadlines, no overlaps, and an explanation of anything that could not fit. Career / Social / Balanced variations.
+- **Week Wizard** – proactive AI weekly planner over the *whole* opportunity dataset (My Catch can be empty). Two independent controls: **Discovery Preference** (Prioritize My Catch / Balanced Discovery / Surprise Me!) and **Weekly Goal** (Career / Social / Balanced), plus commute minutes and activities-per-week. Gemini scores every opportunity; fixed rules pick, place and validate (official times never changed, commute buffers, max 2 activities/day, optional prep blocks before deadlines, reasons shown for any caught item left out).
 
 Events (attend at a set time) and applications (prepare before a deadline) are handled differently.
 
