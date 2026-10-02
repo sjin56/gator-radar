@@ -127,7 +127,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     async (p: Profile, date: string, force: boolean) => {
       const key = JSON.stringify([p, date]);
       if (!force) {
-        const cached = read<{ key: string; result: RecsResult } | null>(K.recs, null);
+        let cached = read<{ key: string; result: RecsResult } | null>(K.recs, null);
+        if (!cached || cached.key !== key) {
+          try {
+            cached = JSON.parse(sessionStorage.getItem(K.recs) ?? "null");
+          } catch {
+            cached = null;
+          }
+        }
         if (cached && cached.key === key) {
           recsKey.current = key;
           setRecs({ status: "done", result: cached.result });
@@ -146,6 +153,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const result = (await res.json()) as RecsResult;
         if (recsKey.current !== key) return; // a newer request superseded this one
         if (result.source === "gemini") write(K.recs, { key, result });
+        else {
+          try {
+            sessionStorage.setItem(K.recs, JSON.stringify({ key, result }));
+          } catch {}
+        }
         setRecs({ status: "done", result });
       } catch (e) {
         if (recsKey.current === key) setRecs({ status: "error", error: e instanceof Error ? e.message : "Request failed" });

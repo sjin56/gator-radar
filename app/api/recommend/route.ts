@@ -6,7 +6,7 @@ import { INTERESTS, type Commitment, type Interest, type Profile, type RecsResul
 
 export const runtime = "nodejs";
 
-const MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+const MODELS = [process.env.GEMINI_MODEL || "gemini-3.8-flash", "gemini-3.5-flash", "gemini-3.1-flash-lite"];
 
 /** Re-build a clean Profile from untrusted JSON. */
 function sanitizeProfile(body: unknown): Profile {
@@ -49,9 +49,9 @@ export async function POST(req: Request) {
   }
 
   const { system, user } = buildPrompt(profile, opportunities);
-  try {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(MODEL)}:generateContent`,
+  const call = (model: string) =>
+    fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-goog-api-key": key },
@@ -84,18 +84,30 @@ export async function POST(req: Request) {
         }),
       },
     );
-    if (!res.ok) {
-      console.error("Gemini HTTP", res.status, (await res.text()).slice(0, 300));
-      return NextResponse.json(asFallback(profile, opportunities, `Gemini request failed (HTTP ${res.status}).`));
+
+  try {
+    let lastStatus = 0;
+    for (const model of [...new Set(MODELS)]) {
+      const res = await call(model);
+      if (res.ok) {
+        const data = await res.json();
+        const text: string | undefined = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        const recs = validateRecs(JSON.parse(text ?? "{}"), opportunities);
+        if (!recs.length) {
+          return NextResponse.json(asFallback(profile, opportunities, "Gemini returned no valid recommendations."));
+        }
+        const result: RecsResult = { source: "gemini", model, recommendations: recs };
+        return NextResponse.json(result);
+      }
+      lastStatus = res.status;
+      console.error("Gemini HTTP", res.status, "model:", model);
+      if (res.status === 429) break; // rate limited: another model call would not help and wastes quota
     }
-    const data = await res.json();
-    const text: string | undefined = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-    const recs = validateRecs(JSON.parse(text ?? "{}"), opportunities);
-    if (!recs.length) {
-      return NextResponse.json(asFallback(profile, opportunities, "Gemini returned no valid recommendations."));
-    }
-    const result: RecsResult = { source: "gemini", model: MODEL, recommendations: recs };
-    return NextResponse.json(result);
+    const note =
+      lastStatus === 429
+        ? "Gemini free-tier rate limit reached. Wait a minute, then press Regenerate."
+        : `Gemini request failed (HTTP ${lastStatus}).`;
+    return NextResponse.json(asFallback(profile, opportunities, note));
   } catch (e) {
     console.error("Gemini error", e instanceof Error ? e.message : e);
     return NextResponse.json(asFallback(profile, opportunities, "Gemini was unreachable or timed out."));
