@@ -58,3 +58,7 @@ Next.js (App Router) · React · TypeScript · Tailwind CSS · Gemini API (REST,
 ## Honest status
 - Real-listing pilot is a manual snapshot for Oct 5–16, 2026 (see Data). No scraping, Firestore or authentication is implemented.
 - Future: automated source aggregation with verification, community submissions, real catch counts, SSO/class-schedule import, reminders, manual week editing.
+
+## Authors
+- **Project Creator & Lead:** Su-jeong Jin (Claire Jin)
+- **AI Development Assistant:** Claude Code
