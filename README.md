@@ -11,7 +11,7 @@ The builder almost missed the registration deadline for this very hackathon.
 **Beneficiaries:** SFSU students, especially those who are new to campus (transfer, first-year, international/exchange students).
 
 ## Data: a curated real-listing pilot (Oct 5–16, 2026)
-All opportunities come from `data/realOpportunities.json`: 92 records manually transcribed from the Campus Rec Fall 2026 Group Fitness flyer, the SFSU Student Events Calendar PDF, GatorXperience screenshots and a few official pages. **This is a snapshot, not live crawling, and records are not individually verified.** Per-record `verificationStatus`, `schedulable`, `recommendationEligible` and `reviewFlags` are respected: unschedulable items are info-only and never placed as fixed blocks. Nothing (end time, URL, venue, eligibility) is invented. Every cache is prefixed with the dataset id `sfsu-real-opportunity-pilot-2026-10-05-to-16-v1`, so results computed on earlier data are never reused. No popularity numbers are shown.
+All opportunities come from `data/realOpportunities.json`: 90 records manually transcribed from the Campus Rec Fall 2026 Group Fitness flyer, the SFSU Student Events Calendar PDF, GatorXperience screenshots and a few official pages. **This is a snapshot, not live crawling, and records are not individually verified.** Per-record `verificationStatus`, `schedulable`, `recommendationEligible` and `reviewFlags` are respected: unschedulable items are info-only and never placed as fixed blocks. Nothing (end time, URL, venue, eligibility) is invented. Every cache is prefixed with the dataset id `sfsu-real-opportunity-pilot-2026-10-05-to-16-v1`, so results computed on earlier data are never reused. No popularity numbers are shown.
 
 ## What it does
 - **Student Profile** – interests, goals, recurring classes/commitments (saved in the browser). A fictional demo student is prefilled.
@@ -33,6 +33,9 @@ The free tier allows about **20 requests per day per model** (a daily quota, not
 - No automatic Gemini calls: Home/navigation never calls the API; only explicit Save-profile, Regenerate and Generate actions do, with a persisted cooldown and duplicate-click protection.
 - Results are cached in the browser (exact inputs) and shared on the server (same inputs, same day), and the demo student ships with a **clearly labeled genuine Gemini snapshot**.
 - When live Gemini is unavailable the app shows the last genuine result with a label, and only then the keyword fallback ("not AI"). Models are tried in order; quotas are per model.
+
+## Future architecture: reusable Gemini scoring
+Today the Gemini planning request includes the Discovery Preference, Weekly Goal and caught items, so each new combination costs one request (results are cached per combination). A planned improvement is to make Gemini's relevance scoring independent of those choices: one call per profile and week would produce reusable scores, and every Discovery Preference x Weekly Goal plan would then be built locally and instantly by the deterministic planner. This is documented as future work and is not implemented.
 
 ## Run locally
 ```bash

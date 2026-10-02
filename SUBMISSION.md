@@ -16,7 +16,7 @@ SFSU students, especially first-year, transfer and international/exchange studen
 
 ## Main Features (implemented)
 - **Student Profile:** interests, goals, recurring classes, commute minutes and preferred weekly activity load, saved in the browser. A fictional demo student is prefilled.
-- **Discover:** 92 curated real listings (see data note). Gemini-powered "Recommended For You" with a reason for each pick, category filters, schedule-conflict badges, and a visible Source & verification panel on every card. The 51 recurring Campus Rec fitness sessions are grouped into 26 weekly classes, with each session catchable on its own.
+- **Discover:** 90 curated real listings (see data note). Gemini-powered "Recommended For You" with a reason for each pick, category filters, schedule-conflict badges, and a visible Source & verification panel on every card. The 51 recurring Campus Rec fitness sessions are grouped into 26 weekly classes, with each session catchable on its own.
 - **My Catch:** save/remove, status tracking, persists after refresh.
 - **Week Wizard:** AI-guided weekly planner over the whole dataset (works with an empty My Catch). Two independent controls: **Discovery Preference** (Prioritize My Catch / Balanced Discovery / Surprise Me!) and **Weekly Goal** (Career / Social / Balanced). Gemini scores listings; fixed rules place events at their official times, apply commute buffers and a free-time guard (max 2 activities/day), never move official times, never place listings flagged as not schedulable, and explain every caught item that did not fit.
 
@@ -24,9 +24,9 @@ SFSU students, especially first-year, transfer and international/exchange studen
 Server-side Gemini scores every listing for the student and explains why (interests, career goals, verified schedule conflicts). Output is validated against the real dataset, so the model cannot invent listings, times or deadlines. Dates, conflicts, commute buffers and calendar placement are deterministic code. Because the free tier allows about 20 requests/day/model, the app never calls Gemini automatically; results are cached (browser and server), a clearly labeled genuine Gemini snapshot is shipped for the demo student, and a cooldown plus a visible "Fallback — not AI" mode protect honesty when no genuine result is available.
 
 ## Data (what is real and what is not)
-- **Manually curated snapshot, not live crawling.** 92 records for Oct 5–16, 2026, transcribed from the Campus Recreation Fall 2026 Group Fitness flyer (51 dated sessions), the SFSU Student Events Calendar PDF, GatorXperience event-card screenshots and a few official Academic Technology / Career pages.
+- **Manually curated snapshot, not live crawling.** 90 records for Oct 5–16, 2026, transcribed from the Campus Recreation Fall 2026 Group Fitness flyer (51 dated sessions), the SFSU Student Events Calendar PDF, GatorXperience event-card screenshots and a few official Academic Technology / Career pages.
 - **Not individually verified.** Each record carries its own verification status and review flags. A listing proves what was published at capture time, not that a class runs on that date, that seats remain, or that every student is eligible. The UI shows these notes on each card.
-- **Respected flags:** 29 records (e.g., drop-in service windows, intramural league windows, listings with only a start time, the ORC Gear Demo with an inconsistent time, BIOL 870 sessions awaiting organizer confirmation) are shown as information only and are never placed as fixed calendar blocks. No end times, URLs, venues or eligibility rules were invented.
+- **Respected flags:** 27 records (e.g., drop-in service windows, intramural league windows, listings with only a start time, the ORC Gear Demo with an inconsistent time) are shown as information only and are never placed as fixed calendar blocks. No end times, URLs, venues or eligibility rules were invented.
 - No popularity numbers are shown, because no real cross-user data exists.
 
 ## Technologies Actually Implemented
@@ -40,7 +40,7 @@ Profile, schedule and saved items stay in the browser by default. Only interests
 
 ## Implemented vs. Curated Data vs. Future
 - **Implemented:** everything under Main Features.
-- **Curated snapshot:** the 92 listings (manual, Oct 5–16 only).
+- **Curated snapshot:** the 90 listings (manual, Oct 5–16 only).
 - **Future (not implemented):** automated source aggregation (GatorXperience, department sites, student orgs) with human verification, student/community submissions with moderation, real cross-user catch counts, SFSU SSO and official class-schedule import, deadline reminders, manual editing of the generated week, and partnership with Campus Rec / Career Center for official feeds.
 
 ## Known limitations (be upfront with judges)
