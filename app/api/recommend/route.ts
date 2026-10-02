@@ -5,6 +5,7 @@ import { asFallback, buildPrompt, validateRecs } from "@/lib/recommend";
 import { INTERESTS, type Commitment, type Interest, type Profile, type RecsResult } from "@/lib/types";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 const MODELS = [process.env.GEMINI_MODEL || "gemini-3.8-flash", "gemini-3.5-flash", "gemini-3.1-flash-lite"];
 
@@ -55,7 +56,7 @@ export async function POST(req: Request) {
       {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-goog-api-key": key },
-        signal: AbortSignal.timeout(25000),
+        signal: AbortSignal.timeout(14000),
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: system }] },
           contents: [{ role: "user", parts: [{ text: user }] }],
@@ -88,7 +89,14 @@ export async function POST(req: Request) {
   try {
     let lastStatus = 0;
     for (const model of [...new Set(MODELS)]) {
-      const res = await call(model);
+      let res: Response;
+      try {
+        res = await call(model);
+      } catch {
+        lastStatus = 408;
+        console.error("Gemini timeout/network error, model:", model);
+        continue;
+      }
       if (res.ok) {
         const data = await res.json();
         const text: string | undefined = data?.candidates?.[0]?.content?.parts?.[0]?.text;
