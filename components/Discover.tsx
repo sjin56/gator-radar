@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { OpportunityCard, SectionTitle } from "@/components/ui";
+import { DemoNote, OpportunityCard, SectionTitle } from "@/components/ui";
 import { useStore } from "@/lib/store";
 import { CATEGORIES, type Category, type Opportunity } from "@/lib/types";
 
@@ -58,8 +58,8 @@ export function PopularThisWeek({ limit = 3 }: { limit?: number }) {
       </SectionTitle>
       <ol className="grid gap-3 md:grid-cols-3">
         {ranked.map((o, i) => (
-          <li key={o.id} className="rounded-2xl border border-lav-200 bg-white p-4">
-            <p className="text-xs font-bold text-gold-500">#{i + 1}</p>
+          <li key={o.id} className="rounded-3xl border border-lav-200 bg-white p-5 shadow-[0_2px_14px_rgba(76,47,160,0.08)]">
+            <p className="text-xs font-extrabold text-gold-500">#{i + 1}</p>
             <p className="font-bold text-plum-900">{o.title}</p>
             <p className="text-sm text-plum-700">♥ {countFor(o.id).week} this week · {countFor(o.id).total} total</p>
           </li>
@@ -76,15 +76,17 @@ export function Discover() {
   const [kind, setKind] = useState<"all" | "event" | "application">("all");
   const all = opportunities.filter((o) => (cat === "All" || o.category === cat) && (kind === "all" || o.kind === kind));
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       <header>
-        <h1 className="text-3xl font-extrabold text-plum-900">Discover</h1>
-        <p className="text-slate-600">Opportunities matched to your profile and schedule.</p>
+        <p className="text-sm font-bold uppercase tracking-wider text-plum-600">Discover</p>
+        <h1 className="text-3xl font-extrabold tracking-tight text-plum-900 md:text-4xl">Opportunities matched to you</h1>
+        <p className="mt-1 text-slate-600">Ranked for your interests, goals and class schedule.</p>
+        <div className="mt-2"><DemoNote /></div>
       </header>
       <RecsBanner />
       <section>
         <SectionTitle>Recommended For You</SectionTitle>
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
           {ranked.slice(0, 3).map(({ opp, rec }) => (
             <OpportunityCard key={opp.id} o={opp} rec={rec} />
           ))}
@@ -119,7 +121,7 @@ export function Discover() {
         {all.length === 0 ? (
           <p className="text-slate-600">No opportunities match these filters.</p>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
             {all.map((o) => (
               <OpportunityCard key={o.id} o={o} rec={ranked.find((r) => r.opp.id === o.id)?.rec} />
             ))}

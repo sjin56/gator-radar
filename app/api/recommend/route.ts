@@ -2,36 +2,13 @@ import { NextResponse } from "next/server";
 import { laNow } from "@/lib/dates";
 import { buildOpportunities } from "@/lib/opportunities";
 import { asFallback, buildPrompt, validateRecs } from "@/lib/recommend";
-import { INTERESTS, type Commitment, type Interest, type Profile, type RecsResult } from "@/lib/types";
+import { sanitizeProfile as sanitize } from "@/lib/sanitize";
+import type { RecsResult } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
 const MODELS = [process.env.GEMINI_MODEL || "gemini-3.8-flash", "gemini-3.5-flash", "gemini-3.1-flash-lite"];
-
-/** Re-build a clean Profile from untrusted JSON. */
-function sanitizeProfile(body: unknown): Profile {
-  const p = (body as { profile?: Partial<Profile> })?.profile ?? {};
-  const interests = (Array.isArray(p.interests) ? p.interests : []).filter((i): i is Interest =>
-    (INTERESTS as readonly string[]).includes(i as string),
-  );
-  const commitments: Commitment[] = (Array.isArray(p.commitments) ? p.commitments : [])
-    .slice(0, 20)
-    .map((c, i) => ({
-      id: `c${i}`,
-      title: String(c?.title ?? "").slice(0, 60),
-      days: (Array.isArray(c?.days) ? c.days : []).map(Number).filter((d) => d >= 1 && d <= 5),
-      start: Math.max(0, Math.min(1439, Number(c?.start) || 0)),
-      end: Math.max(0, Math.min(1439, Number(c?.end) || 0)),
-      kind: c?.kind === "other" ? "other" : "class",
-    }));
-  return {
-    interests,
-    academicFocus: String(p.academicFocus ?? "").slice(0, 200),
-    careerGoals: String(p.careerGoals ?? "").slice(0, 500),
-    commitments,
-  };
-}
 
 export async function POST(req: Request) {
   let body: unknown;
@@ -40,7 +17,7 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
-  const profile = sanitizeProfile(body);
+  const profile = sanitize((body as { profile?: unknown })?.profile);
   const opportunities = buildOpportunities(laNow().date);
 
   const key = process.env.GEMINI_API_KEY;

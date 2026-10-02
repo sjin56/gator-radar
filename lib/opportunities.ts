@@ -102,6 +102,81 @@ export function buildOpportunities(today: string): Opportunity[] {
       date: addDays(nextMon, 4), start: 14 * 60, end: 16 * 60,
       format: "On Campus", location: "Campus Garden (demo)",
     },
+    {
+      ...base,
+      id: "evt-research-showcase",
+      title: "Faculty Research Showcase: AI for Health",
+      description:
+        "Short faculty talks and poster tables on AI and data science projects in healthcare. A good way to find a lab to join and ask questions about undergraduate research.",
+      category: "Research", kind: "event", typeLabel: "Talk & poster session",
+      tags: ["Research", "AI", "Healthcare", "Technology"],
+      date: addDays(nextMon, 0), start: 15 * 60, end: 16 * 60 + 30,
+      format: "On Campus", location: "Science & Engineering Atrium (demo)",
+    },
+    {
+      ...base,
+      id: "evt-soccer",
+      title: "Intramural Soccer Pickup Night",
+      description:
+        "Casual co-ed pickup soccer, all skill levels welcome. Great for staying active and meeting students outside your major.",
+      category: "Wellness", kind: "event", typeLabel: "Sports",
+      tags: ["Sports", "Wellness", "Student Life"],
+      date: addDays(nextMon, 0), start: 17 * 60 + 30, end: 19 * 60,
+      format: "On Campus", location: "Campus Field (demo)",
+    },
+    {
+      ...base,
+      id: "evt-intl-coffee",
+      title: "International Students Coffee Hour",
+      description:
+        "Relaxed weekly meetup for international and exchange students: coffee, conversation, and tips for navigating campus and the city.",
+      category: "Student Life", kind: "event", typeLabel: "Community meetup",
+      tags: ["Student Life", "Leadership"],
+      date: addDays(nextMon, 1), start: 15 * 60, end: 16 * 60,
+      format: "On Campus", location: "Global Programs Lounge (demo)",
+    },
+    {
+      ...base,
+      id: "evt-alumni-night",
+      title: "Alumni Networking Night: Tech & Business",
+      description:
+        "Meet SFSU alumni working in tech, startups, and business. Short panel followed by small-group networking. Bring questions about breaking into the industry.",
+      category: "Career", kind: "event", typeLabel: "Networking",
+      tags: ["Career", "Business", "Technology", "Leadership"],
+      date: addDays(nextMon, 3), start: 16 * 60 + 30, end: 18 * 60,
+      format: "On Campus", location: "Student Center Ballroom (demo)",
+    },
+    {
+      ...base,
+      id: "evt-hack-night",
+      title: "Hack Night: Build with APIs",
+      description:
+        "Open workshop where students pair up to build small projects using public APIs and AI tools. Mentors on hand; beginners welcome.",
+      category: "Student Life", kind: "event", typeLabel: "Workshop",
+      tags: ["Technology", "AI", "Student Life"],
+      date: addDays(nextMon, 4), start: 11 * 60, end: 13 * 60,
+      format: "On Campus", location: "Engineering Lab 2 (demo)",
+    },
+    {
+      ...base,
+      id: "app-innovation-challenge",
+      title: "Campus Innovation Challenge",
+      description:
+        "Team competition to prototype a solution to a campus problem. Teams of 1-4 submit a short proposal first; finalists present to a panel.",
+      category: "Competition", kind: "application", typeLabel: "Competition",
+      tags: ["Technology", "AI", "Business", "Leadership"],
+      deadline: addDays(nextMon, 11), format: "Hybrid", location: "Proposal submitted online (demo)", prepSessions: 2,
+    },
+    {
+      ...base,
+      id: "app-wellness-ambassador",
+      title: "Peer Wellness Ambassador Program",
+      description:
+        "Train as a peer ambassador promoting wellness and mental-health resources on campus. Includes a short training and about 3 hours per week.",
+      category: "Volunteering", kind: "application", typeLabel: "Student program",
+      tags: ["Wellness", "Volunteering", "Leadership", "Healthcare"],
+      deadline: addDays(nextMon, 6), format: "On Campus", location: "Student Health Center (demo)", prepSessions: 1,
+    },
   ];
 }
 
@@ -115,4 +190,11 @@ export const DEMO_COUNTS: Record<string, { total: number; week: number }> = {
   "evt-yoga": { total: 21, week: 8 },
   "evt-ai-club": { total: 27, week: 11 },
   "evt-garden": { total: 9, week: 3 },
+  "evt-research-showcase": { total: 19, week: 7 },
+  "evt-soccer": { total: 16, week: 6 },
+  "evt-intl-coffee": { total: 13, week: 5 },
+  "evt-alumni-night": { total: 22, week: 10 },
+  "evt-hack-night": { total: 18, week: 8 },
+  "app-innovation-challenge": { total: 12, week: 4 },
+  "app-wellness-ambassador": { total: 8, week: 2 },
 };

@@ -5,8 +5,8 @@ export const INTERESTS = [
 export type Interest = (typeof INTERESTS)[number];
 
 export type Category =
-  | "Research" | "Career" | "Scholarship" | "Wellness" | "Student Life" | "Volunteering";
-export const CATEGORIES: Category[] = ["Research", "Career", "Scholarship", "Wellness", "Student Life", "Volunteering"];
+  | "Research" | "Career" | "Scholarship" | "Wellness" | "Student Life" | "Volunteering" | "Competition";
+export const CATEGORIES: Category[] = ["Research", "Career", "Scholarship", "Competition", "Wellness", "Student Life", "Volunteering"];
 
 export type Opportunity = {
   id: string;
@@ -45,6 +45,10 @@ export type Profile = {
   academicFocus: string;
   careerGoals: string;
   commitments: Commitment[];
+  /** one-way travel to campus, minutes (no addresses collected) */
+  commuteMinutes: number;
+  /** preferred number of extra activities per week */
+  weeklyActivities: number;
 };
 
 export type CatchStatus = "Saved" | "Planning to Apply" | "Applied";
@@ -56,4 +60,14 @@ export type RecsResult = {
   model?: string;
   note?: string;
   recommendations: Recommendation[];
+};
+
+export type Discovery = "mycatch" | "balanced" | "surprise";
+export type Goal = "career" | "social" | "balanced";
+export type PlanScore = { id: string; score: number; reason: string };
+export type PlanScores = {
+  source: "gemini" | "fallback";
+  model?: string;
+  note?: string;
+  items: PlanScore[];
 };

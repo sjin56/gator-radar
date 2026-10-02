@@ -68,62 +68,67 @@ export function OpportunityCard({ o, rec }: { o: Opportunity; rec?: Recommendati
   const conflict = findConflict(o, profile.commitments);
   const count = countFor(o.id);
   return (
-    <article className="flex flex-col gap-3 rounded-2xl border border-lav-200 bg-white p-4 shadow-sm">
+    <article className="flex flex-col gap-3 rounded-3xl border border-lav-200 bg-white p-5 shadow-[0_2px_14px_rgba(76,47,160,0.08)] transition hover:shadow-[0_6px_22px_rgba(76,47,160,0.14)]">
       <div className="flex items-start justify-between gap-2">
         <div className="flex flex-wrap gap-1.5">
           {rec && matchBadge(rec.score)}
-          {o.kind === "application" && o.deadline && <DeadlineBadge deadline={o.deadline} today={today} />}
-          {o.kind === "event" && <Badge tone="plum">Event</Badge>}
-          {o.kind === "application" && <Badge tone="gold">Apply</Badge>}
-          {conflict && <Badge tone="red">Conflicts with {conflict}</Badge>}
+          {o.kind === "application" && o.deadline ? <DeadlineBadge deadline={o.deadline} today={today} /> : <Badge tone="plum">Event</Badge>}
+          {conflict && <Badge tone="red">Clashes with {conflict}</Badge>}
         </div>
         <HeartButton id={o.id} title={o.title} />
       </div>
       <div>
-        <h3 className="text-base font-bold leading-snug text-plum-900">{o.title}</h3>
-        <p className="mt-0.5 text-xs font-medium text-plum-600">
-          {o.category} · {o.typeLabel}
+        <h3 className="text-lg font-extrabold leading-snug text-plum-900">{o.title}</h3>
+        <p className="mt-0.5 text-xs font-semibold uppercase tracking-wide text-plum-600">
+          {o.category} · {o.kind === "application" ? "Application" : o.typeLabel}
         </p>
       </div>
-      <p className="text-sm leading-relaxed text-slate-700">{o.description}</p>
+      <p className="line-clamp-3 text-sm leading-relaxed text-slate-600">{o.description}</p>
       {rec?.reason && (
-        <p className="rounded-xl bg-lav-50 p-3 text-sm text-plum-900">
-          <span className="font-semibold">Why this matches you: </span>
+        <p className="rounded-2xl bg-lav-50 px-3 py-2.5 text-sm leading-snug text-plum-900">
+          <span aria-hidden>✨ </span>
+          <span className="font-semibold">Why you: </span>
           {rec.reason}
         </p>
       )}
-      <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-slate-600">
-        <div><dt className="sr-only">When</dt>🗓 {whenText(o)}</div>
-        <div><dt className="sr-only">Where</dt>📍 {o.format} · {o.location}</div>
-        <div className="col-span-2">
-          🎓 Eligibility: {o.eligibility ?? "Not verified — check the official source"}
-        </div>
-      </dl>
-      <div className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-1">
-        <span className="text-xs font-medium text-plum-700" title={countsMode === "demo" ? "Illustrative demo number — shared database not connected" : "Active catches from anonymous browsers"}>
-          ♥ {count.total} catches · {count.week} this week{countsMode === "demo" ? " (demo)" : ""}
+      <ul className="space-y-0.5 text-xs text-slate-600">
+        <li>🗓 {whenText(o)}</li>
+        <li>📍 {o.format} · {o.location.replace(" (demo)", "")}</li>
+      </ul>
+      <div className="mt-auto flex flex-wrap items-center justify-between gap-2 border-t border-lav-100 pt-3">
+        <span
+          className="text-xs font-semibold text-plum-700"
+          title={countsMode === "demo" ? "Illustrative demo number. The shared database is not connected." : "Active catches from anonymous browsers"}
+        >
+          ♥ {count.total} catches{countsMode === "demo" ? " · demo" : ""}
         </span>
         <button
           onClick={() => toggleCatch(o.id)}
-          className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-            caught ? "bg-gold-300 text-plum-900 hover:bg-gold-400" : "bg-plum-800 text-white hover:bg-plum-700"
+          className={`rounded-full px-4 py-2 text-sm font-bold transition ${
+            caught ? "bg-gold-300 text-plum-950 hover:bg-gold-400" : "bg-plum-800 text-white hover:bg-plum-700"
           }`}
         >
-          {caught ? "Caught ✓ (remove)" : "Catch This Opportunity →"}
+          {caught ? "Caught ✓" : "Catch This →"}
         </button>
       </div>
-      <p className="text-[11px] text-slate-500">
-        {o.verified ? "Verified listing" : "Demo record — not a verified real listing."}
-      </p>
     </article>
   );
 }
 
 export function SectionTitle({ children, sub }: { children: ReactNode; sub?: ReactNode }) {
   return (
-    <div className="mb-3">
-      <h2 className="text-xl font-extrabold text-plum-900">{children}</h2>
-      {sub && <p className="text-sm text-slate-600">{sub}</p>}
+    <div className="mb-4">
+      <h2 className="text-2xl font-extrabold tracking-tight text-plum-900">{children}</h2>
+      {sub && <p className="mt-0.5 text-sm text-slate-600">{sub}</p>}
     </div>
+  );
+}
+
+/** Honest, low-key disclosure used across pages. */
+export function DemoNote() {
+  return (
+    <p className="inline-flex items-center gap-2 rounded-full bg-gold-100 px-3 py-1 text-xs font-semibold text-[#6b4a00]">
+      <span aria-hidden>●</span> Demo data: opportunities are fictional samples, not verified SFSU listings.
+    </p>
   );
 }

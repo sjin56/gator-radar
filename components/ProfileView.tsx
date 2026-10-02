@@ -22,11 +22,12 @@ export function ProfileView() {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-3xl font-extrabold text-plum-900">Student Profile</h1>
+        <p className="text-sm font-bold uppercase tracking-wider text-plum-600">Student Profile</p>
+        <h1 className="text-3xl font-extrabold tracking-tight text-plum-900 md:text-4xl">About you</h1>
         <p className="text-slate-600">Prefilled with a fictional demo student. Edit anything, then save.</p>
       </header>
 
-      <section className="rounded-2xl border border-lav-200 bg-white p-5">
+      <section className="rounded-3xl border border-lav-200 bg-white p-6 shadow-[0_2px_14px_rgba(76,47,160,0.08)]">
         <h2 className="font-bold text-plum-900">Interests</h2>
         <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label="Interests">
           {INTERESTS.map((i) => {
@@ -55,7 +56,7 @@ export function ProfileView() {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-lav-200 bg-white p-5">
+      <section className="rounded-3xl border border-lav-200 bg-white p-6 shadow-[0_2px_14px_rgba(76,47,160,0.08)]">
         <div className="flex items-center justify-between">
           <h2 className="font-bold text-plum-900">Class schedule &amp; fixed commitments</h2>
           <button

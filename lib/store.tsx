@@ -23,6 +23,8 @@ export const DEMO_PROFILE: Profile = {
     { id: "c3", title: "CS 211 Lab", days: [2, 4], start: 780, end: 855, kind: "class" },
     { id: "c4", title: "Study Group", days: [5], start: 900, end: 1020, kind: "other" },
   ],
+  commuteMinutes: 20,
+  weeklyActivities: 3,
 };
 
 type Store = {
@@ -114,7 +116,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const n = laNow();
     setToday(n.date);
     setNowMinutes(n.minutes);
-    setProfile(read(K.profile, DEMO_PROFILE));
+    setProfile({ ...DEMO_PROFILE, ...read<Partial<Profile>>(K.profile, {}) });
     const saved = read<Record<string, CatchRecord>>(K.catches, {});
     catchesRef.current = saved;
     setCatches(saved);
@@ -125,7 +127,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const fetchRecs = useCallback(
     async (p: Profile, date: string, force: boolean) => {
-      const key = JSON.stringify([p, date]);
+      const key = JSON.stringify([p.interests, p.academicFocus, p.careerGoals, p.commitments, date]);
       if (!force) {
         let cached = read<{ key: string; result: RecsResult } | null>(K.recs, null);
         if (!cached || cached.key !== key) {

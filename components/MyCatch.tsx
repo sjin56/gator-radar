@@ -16,7 +16,8 @@ export function MyCatch() {
     <div className="space-y-5">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-extrabold text-plum-900">My Catch</h1>
+          <p className="text-sm font-bold uppercase tracking-wider text-plum-600">My Catch</p>
+          <h1 className="text-3xl font-extrabold tracking-tight text-plum-900 md:text-4xl">Your saved opportunities</h1>
           <p className="text-slate-600">Saved opportunities, statuses, and deadlines. Stored in this browser.</p>
         </div>
         <button
@@ -24,7 +25,7 @@ export function MyCatch() {
           disabled={items.length === 0}
           className="rounded-full bg-plum-800 px-5 py-2.5 font-semibold text-white hover:bg-plum-700 disabled:opacity-40"
         >
-          Plan my week with these →
+          Plan my week →
         </button>
       </header>
       {items.length === 0 ? (
@@ -39,7 +40,7 @@ export function MyCatch() {
             const rec = catches[o.id];
             const n = o.deadline ? daysBetween(today, o.deadline) : null;
             return (
-              <li key={o.id} className="flex flex-wrap items-center gap-4 rounded-2xl border border-lav-200 bg-white p-4">
+              <li key={o.id} className="flex flex-wrap items-center gap-4 rounded-3xl border border-lav-200 bg-white p-5 shadow-[0_2px_14px_rgba(76,47,160,0.08)]">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <h2 className="font-bold text-plum-900">{o.title}</h2>
