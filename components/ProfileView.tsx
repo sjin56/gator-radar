@@ -2,13 +2,14 @@
 
 import { useState } from "react";
 import { DAY_NAMES, formatTime, toHHMM, toMinutes } from "@/lib/dates";
+import { recsSignature } from "@/lib/demoProfile";
 import { DEMO_PROFILE, useStore } from "@/lib/store";
 import { INTERESTS, type Commitment, type Interest, type Profile } from "@/lib/types";
 
 const inputCls = "w-full rounded-lg border border-lav-300 bg-white px-3 py-2 text-sm";
 
 export function ProfileView() {
-  const { profile, saveProfile, resetDemoProfile } = useStore();
+  const { profile, saveProfile, resetDemoProfile, refreshRecs } = useStore();
   const [draft, setDraft] = useState<Profile>(profile);
   const [saved, setSaved] = useState(false);
   const patch = (p: Partial<Profile>) => {
@@ -113,8 +114,11 @@ export function ProfileView() {
         <button
           disabled={invalid}
           onClick={() => {
-            saveProfile({ ...draft, commitments: draft.commitments.map((c) => ({ ...c, title: c.title.trim() })) });
+            const next = { ...draft, commitments: draft.commitments.map((c) => ({ ...c, title: c.title.trim() })) };
+            const changed = recsSignature(next) !== recsSignature(profile);
+            saveProfile(next);
             setSaved(true);
+            if (changed) refreshRecs(next, false); // explicit user action: one live call only if the recommendation inputs changed
           }}
           className="rounded-full bg-gold-300 px-6 py-2.5 font-bold text-plum-900 hover:bg-gold-400 disabled:opacity-40"
         >

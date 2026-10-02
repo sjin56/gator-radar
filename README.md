@@ -26,6 +26,12 @@ The server validates every item against the real dataset (unknown ids dropped, s
 Gemini never creates opportunities, dates, or times. Date math and scheduling are deterministic code (America/Los_Angeles).
 If Gemini is unavailable the UI shows a visible **"Fallback mode — not AI"** banner with simple keyword matching.
 
+## Gemini free-tier reliability
+The free tier allows about **20 requests per day per model** (a daily quota, not per-minute). To stay within it:
+- No automatic Gemini calls: Home/navigation never calls the API; only explicit Save-profile, Regenerate and Generate actions do, with a persisted cooldown and duplicate-click protection.
+- Results are cached in the browser (exact inputs) and shared on the server (same inputs, same day), and the demo student ships with a **clearly labeled genuine Gemini snapshot**.
+- When live Gemini is unavailable the app shows the last genuine result with a label, and only then the keyword fallback ("not AI"). Models are tried in order; quotas are per model.
+
 ## Run locally
 ```bash
 npm install

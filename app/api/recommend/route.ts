@@ -1,14 +1,28 @@
 import { NextResponse } from "next/server";
 import { laNow } from "@/lib/dates";
+import { runGemini } from "@/lib/gemini";
 import { buildOpportunities } from "@/lib/opportunities";
 import { asFallback, buildPrompt, validateRecs } from "@/lib/recommend";
-import { sanitizeProfile as sanitize } from "@/lib/sanitize";
-import type { RecsResult } from "@/lib/types";
+import { sanitizeProfile } from "@/lib/sanitize";
+import type { Recommendation, RecsResult } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-const MODELS = [process.env.GEMINI_MODEL || "gemini-3.8-flash", "gemini-3.5-flash", "gemini-3.1-flash-lite"];
+const SCHEMA = {
+  type: "OBJECT",
+  properties: {
+    recommendations: {
+      type: "ARRAY",
+      items: {
+        type: "OBJECT",
+        properties: { id: { type: "STRING" }, score: { type: "INTEGER" }, reason: { type: "STRING" } },
+        required: ["id", "score", "reason"],
+      },
+    },
+  },
+  required: ["recommendations"],
+};
 
 export async function POST(req: Request) {
   let body: unknown;
@@ -17,84 +31,28 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
-  const profile = sanitize((body as { profile?: unknown })?.profile);
-  const opportunities = buildOpportunities(laNow().date);
+  const profile = sanitizeProfile((body as { profile?: unknown })?.profile);
+  const now = laNow();
+  const opportunities = buildOpportunities(now.date);
 
   const key = process.env.GEMINI_API_KEY;
-  if (!key) {
-    const r: RecsResult = asFallback(profile, opportunities, "GEMINI_API_KEY is not configured on the server.");
-    return NextResponse.json(r);
-  }
+  if (!key) return NextResponse.json(asFallback(profile, opportunities, "GEMINI_API_KEY is not configured on the server."));
 
   const { system, user } = buildPrompt(profile, opportunities);
-  const call = (model: string) =>
-    fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-goog-api-key": key },
-        signal: AbortSignal.timeout(14000),
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: system }] },
-          contents: [{ role: "user", parts: [{ text: user }] }],
-          generationConfig: {
-            temperature: 0.3,
-            responseMimeType: "application/json",
-            responseSchema: {
-              type: "OBJECT",
-              properties: {
-                recommendations: {
-                  type: "ARRAY",
-                  items: {
-                    type: "OBJECT",
-                    properties: {
-                      id: { type: "STRING" },
-                      score: { type: "INTEGER" },
-                      reason: { type: "STRING" },
-                    },
-                    required: ["id", "score", "reason"],
-                  },
-                },
-              },
-              required: ["recommendations"],
-            },
-          },
-        }),
-      },
-    );
-
-  try {
-    let lastStatus = 0;
-    for (const model of [...new Set(MODELS)]) {
-      let res: Response;
-      try {
-        res = await call(model);
-      } catch {
-        lastStatus = 408;
-        console.error("Gemini timeout/network error, model:", model);
-        continue;
-      }
-      if (res.ok) {
-        const data = await res.json();
-        const text: string | undefined = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-        const recs = validateRecs(JSON.parse(text ?? "{}"), opportunities);
-        if (!recs.length) {
-          return NextResponse.json(asFallback(profile, opportunities, "Gemini returned no valid recommendations."));
-        }
-        const result: RecsResult = { source: "gemini", model, recommendations: recs };
-        return NextResponse.json(result);
-      }
-      lastStatus = res.status;
-      console.error("Gemini HTTP", res.status, "model:", model);
-      if (res.status === 429) break; // rate limited: another model call would not help and wastes quota
-    }
-    const note =
-      lastStatus === 429
-        ? "Gemini free-tier rate limit reached. Wait a minute, then press Regenerate."
-        : `Gemini request failed (HTTP ${lastStatus}).`;
-    return NextResponse.json(asFallback(profile, opportunities, note));
-  } catch (e) {
-    console.error("Gemini error", e instanceof Error ? e.message : e);
-    return NextResponse.json(asFallback(profile, opportunities, "Gemini was unreachable or timed out."));
+  const out = await runGemini<Recommendation[]>({
+    key, system, user, schema: SCHEMA, temperature: 0.3, timeoutMs: 14000,
+    // identical profiles on the same day share one Gemini result (protects the free daily quota)
+    cacheKey: JSON.stringify(["recs", profile.interests, profile.academicFocus, profile.careerGoals, profile.commitments, now.date]),
+    parse: (raw) => {
+      const recs = validateRecs(raw, opportunities);
+      return recs.length ? recs : null;
+    },
+  });
+  if (out.ok) {
+    const result: RecsResult = {
+      source: "gemini", model: out.model, recommendations: out.data, capturedAt: out.capturedAt, shared: out.shared,
+    };
+    return NextResponse.json(result);
   }
+  return NextResponse.json({ ...asFallback(profile, opportunities, out.note), retryAfter: out.retryAfter, limit: out.limit });
 }

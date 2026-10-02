@@ -54,11 +54,17 @@ export type Profile = {
 export type CatchStatus = "Saved" | "Planning to Apply" | "Applied";
 export type CatchRecord = { status: CatchStatus; caughtAt: string };
 
+export type LimitKind = "rpm" | "tpm" | "daily" | "unknown";
+
 export type Recommendation = { id: string; score: number; reason: string };
 export type RecsResult = {
   source: "gemini" | "fallback";
   model?: string;
   note?: string;
+  capturedAt?: string;
+  shared?: boolean;
+  retryAfter?: number;
+  limit?: LimitKind;
   recommendations: Recommendation[];
 };
 
@@ -69,5 +75,9 @@ export type PlanScores = {
   source: "gemini" | "fallback";
   model?: string;
   note?: string;
+  capturedAt?: string;
+  shared?: boolean;
+  retryAfter?: number;
+  limit?: LimitKind;
   items: PlanScore[];
 };

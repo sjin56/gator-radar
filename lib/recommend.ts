@@ -26,7 +26,7 @@ export function describeOpportunity(o: Opportunity, profile?: Profile): string {
 export function buildPrompt(profile: Profile, opportunities: Opportunity[]) {
   const system =
     "You are the recommendation engine of Gator Radar, a tool for San Francisco State University students. " +
-    "You will receive a student profile and a CLOSED list of opportunities. Rank the opportunities that best fit the student. " +
+    "You will receive a student profile and a CLOSED list of opportunities. Score EVERY opportunity in the list (include all ids) for how well it fits the student. " +
     "Rules: (1) Only use ids from the list; never invent opportunities, dates, times, eligibility rules, or deadlines. " +
     "(2) Each reason must be one or two short sentences explaining why it fits this student, referring to their interests, career goals, or schedule. " +
     "(3) Consider schedule availability: rely ONLY on the VERIFIED SCHEDULE CONFLICT / no schedule conflict labels supplied; never infer other conflicts or travel times. Mention a verified conflict in the reason and lower the score. " +
@@ -54,7 +54,7 @@ export function validateRecs(raw: unknown, opportunities: Opportunity[]): Recomm
     seen.add(r.id);
     out.push({ id: r.id, score, reason: clip(typeof r.reason === "string" ? r.reason : "", 320) });
   }
-  return out.sort((a, b) => b.score - a.score).slice(0, 8);
+  return out.sort((a, b) => b.score - a.score).slice(0, 20);
 }
 
 /** Simple keyword/tag overlap. NOT AI. Used only when Gemini is unavailable. */

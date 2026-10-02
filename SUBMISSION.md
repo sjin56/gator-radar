@@ -27,7 +27,7 @@ SFSU students — especially first-year, transfer, and international/exchange st
 ## How AI Was Used
 Gemini (server-side) powers both Discover recommendations and Week Wizard planning (it scores every opportunity for the chosen Discovery Preference and Weekly Goal). For recommendations it receives the student's profile and a closed list of opportunities and returns structured JSON (id, score, reason)
 explaining why each opportunity fits, considering interests, career goals and schedule. The server validates output against the real dataset,
-so the model can't invent opportunities, times, or deadlines. Dates and scheduling are deterministic code. If Gemini fails, the UI shows a clear non-AI fallback banner.
+so the model can't invent opportunities, times, or deadlines. Dates and scheduling are deterministic code. Results are cached and shared to respect the free tier; the demo student includes a labeled saved Gemini snapshot. If no genuine Gemini result is available, the UI shows a clear non-AI fallback banner.
 
 ## Technologies Actually Implemented
 Next.js, React, TypeScript, Tailwind CSS, Gemini API (server-side), localStorage, Vercel hosting (https://gator-radar.vercel.app). **[CONFIRM]** Google Cloud Firestore (code written; list only if enabled and tested). **[CONFIRM]** Hosting: Vercel / Cloud Run (list only the one actually used).

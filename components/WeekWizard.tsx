@@ -5,7 +5,9 @@ import { Badge } from "@/components/ui";
 import { addDays, formatDate, formatTime, mondayOf } from "@/lib/dates";
 import { planWeek, type Block, type Origin } from "@/lib/planner";
 import { useStore } from "@/lib/store";
-import type { Discovery, Goal, PlanScores } from "@/lib/types";
+import { fmtWait, fmtWhen } from "@/components/Discover";
+import { fallbackPlanScores } from "@/lib/planAI";
+import type { Discovery, Goal, PlanScores, RecsResult } from "@/lib/types";
 
 const HOUR_START = 8;
 const HOUR_END = 20;
@@ -13,6 +15,7 @@ const PX = 52;
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
 const CACHE_KEY = "gr.plans.v1";
 const PREF_KEY = "gr.wizard.v1";
+const LAST_KEY = "gr.plan.last.v1";
 
 const DISCOVERY: { id: Discovery; icon: string; title: string; desc: string }[] = [
   { id: "mycatch", icon: "♥", title: "Prioritize My Catch", desc: "Your saved picks come first; a few new ideas are mixed in." },
@@ -28,7 +31,7 @@ const GOALS: { id: Goal; title: string; desc: string }[] = [
 type ScoreState =
   | { status: "idle" | "loading" }
   | { status: "error"; error: string }
-  | { status: "done"; scores: PlanScores; cached: boolean };
+  | { status: "done"; scores: PlanScores; origin: "fresh" | "saved" | "stale" | "recs" | "fallback"; notice?: string };
 
 const loadCache = (): Record<string, PlanScores> => {
   try {
@@ -48,12 +51,14 @@ function blockStyle(b: Block) {
 const originIcon = (o?: Origin) => (o === "caught" ? "♥ " : o === "new" ? "✨ " : "");
 
 export function WeekWizard() {
-  const { today, nowMinutes, profile, saveProfile, catches, opportunities, setView } = useStore();
+  const { today, nowMinutes, profile, saveProfile, catches, opportunities, setView, genuineRecs, cooldownLeft, startCooldown } = useStore();
   const [discovery, setDiscovery] = useState<Discovery>("mycatch");
   const [goal, setGoal] = useState<Goal>("balanced");
   const [offset, setOffset] = useState(1);
   const [state, setState] = useState<ScoreState>({ status: "idle" });
   const memo = useRef<Record<string, PlanScores>>({});
+  const inflight = useRef(false);
+  const keyRef = useRef("");
 
   useEffect(() => {
     try {
@@ -79,10 +84,35 @@ export function WeekWizard() {
   // Show a previously generated result instantly; never call Gemini automatically.
   useEffect(() => {
     const hit = memo.current[key] ?? loadCache()[key];
-    setState(hit ? { status: "done", scores: hit, cached: true } : { status: "idle" });
+    keyRef.current = key;
+    setState(hit ? { status: "done", scores: hit, origin: "saved" } : { status: "idle" });
   }, [key]);
 
+  /** Best genuine Gemini scores we already have, without any network call. */
+  function buildFromSaved(notice: string, serverFallback?: PlanScores): ScoreState {
+    let last: PlanScores | null = null;
+    try {
+      last = JSON.parse(localStorage.getItem(LAST_KEY) ?? "null");
+    } catch {}
+    if (last?.items?.length) return { status: "done", scores: last, origin: "stale", notice };
+    if (genuineRecs) {
+      const r: RecsResult = genuineRecs;
+      return {
+        status: "done", origin: "recs", notice,
+        scores: { source: "gemini", model: r.model, capturedAt: r.capturedAt, items: r.recommendations },
+      };
+    }
+    return { status: "done", origin: "fallback", notice, scores: serverFallback ?? fallbackPlanScores(profile, opportunities, notice) };
+  }
+
   async function generate() {
+    if (inflight.current) return; // ignore repeated clicks while a request is running
+    if (cooldownLeft > 0) {
+      // Gemini is cooling down: still give the student a plan from genuine saved scores.
+      setState(buildFromSaved(`Live Gemini calls are paused for ${fmtWait(cooldownLeft)} to protect the free quota.`));
+      return;
+    }
+    inflight.current = true;
     setState({ status: "loading" });
     const requestKey = key;
     try {
@@ -95,20 +125,28 @@ export function WeekWizard() {
         }),
       });
       if (!res.ok) throw new Error(`Server error ${res.status}`);
-      const scores = (await res.json()) as PlanScores;
-      memo.current[requestKey] = scores;
+      const scores = (await res.json()) as PlanScores & { retryAfter?: number };
       if (scores.source === "gemini") {
+        memo.current[requestKey] = scores;
         const cache = loadCache();
         const keys = Object.keys(cache);
         if (keys.length > 20) delete cache[keys[0]];
         cache[requestKey] = scores;
         try {
           localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
+          localStorage.setItem(LAST_KEY, JSON.stringify(scores));
         } catch {}
+        startCooldown(15); // anti-spam pause after a successful call
+        if (keyRef.current === requestKey) setState({ status: "done", scores, origin: "fresh" });
+      } else {
+        startCooldown(scores.retryAfter ?? 45);
+        if (keyRef.current === requestKey) setState(buildFromSaved(scores.note ?? "Gemini was unavailable.", scores));
       }
-      setState((s) => (s.status === "loading" ? { status: "done", scores, cached: false } : s));
-    } catch (e) {
-      setState({ status: "error", error: e instanceof Error ? e.message : "Request failed" });
+    } catch {
+      startCooldown(30);
+      if (keyRef.current === requestKey) setState(buildFromSaved("Could not reach the server."));
+    } finally {
+      inflight.current = false;
     }
   }
 
@@ -195,7 +233,11 @@ export function WeekWizard() {
             onClick={generate} disabled={state.status === "loading"}
             className="ml-auto rounded-full bg-gold-300 px-7 py-3 font-extrabold text-plum-950 shadow-md hover:bg-gold-400 disabled:opacity-60"
           >
-            {state.status === "loading" ? "Gemini is planning…" : state.status === "done" ? "↻ Regenerate My Week" : "✨ Generate My Week"}
+            {state.status === "loading"
+              ? "Gemini is planning…"
+              : cooldownLeft > 0
+                ? `Build week · live Gemini in ${fmtWait(cooldownLeft)}`
+                : state.status === "done" ? "↻ Regenerate My Week" : "✨ Generate My Week"}
           </button>
         </div>
         <p className="text-xs text-slate-500">
@@ -210,17 +252,36 @@ export function WeekWizard() {
         <div role="status" className="rounded-2xl bg-lav-100 p-4 text-sm text-plum-800">✨ Gemini is scoring every opportunity for your week…</div>
       )}
 
-      {state.status === "done" && (
-        state.scores.source === "gemini" ? (
-          <div className="rounded-2xl bg-emerald-50 p-3 text-sm text-emerald-900">
-            ✨ <strong>Plan guided by Google Gemini</strong> ({state.scores.model}){state.cached ? " · loaded from your saved result" : ""}. Times, conflicts and deadlines are checked by fixed rules. Verify details with official sources.
-          </div>
-        ) : (
+      {state.status === "done" && (() => {
+        const sc = state.scores;
+        const model = sc.model ? ` (${sc.model})` : "";
+        const warn = state.notice ? ` ${state.notice}` : "";
+        if (state.origin === "fresh" || state.origin === "saved")
+          return (
+            <div className="rounded-2xl bg-emerald-50 p-3 text-sm text-emerald-900">
+              ✨ <strong>Plan guided by Google Gemini</strong>{model}
+              {state.origin === "saved" ? `, saved ${fmtWhen(sc.capturedAt)} and reused to protect the free quota` : sc.shared ? " (shared result from earlier today)" : ""}.
+              Times, conflicts and deadlines are checked by fixed rules. Verify details with official sources.
+            </div>
+          );
+        if (state.origin === "stale")
+          return (
+            <div role="status" className="rounded-2xl bg-lav-100 p-3 text-sm text-plum-900">
+              🕘 <strong>Live Gemini unavailable.</strong>{warn} Using your last genuine Gemini planning scores{model} from {fmtWhen(sc.capturedAt)}; the calendar was rebuilt with your current choices by fixed rules.
+            </div>
+          );
+        if (state.origin === "recs")
+          return (
+            <div role="status" className="rounded-2xl bg-lav-100 p-3 text-sm text-plum-900">
+              🕘 <strong>Live Gemini unavailable.</strong>{warn} Using genuine Gemini relevance scores{model} from your recommendations ({fmtWhen(sc.capturedAt)}); your Discovery Preference, Weekly Goal and schedule were applied by fixed rules.
+            </div>
+          );
+        return (
           <div role="status" className="rounded-2xl bg-gold-100 p-3 text-sm text-[#6b4a00]">
-            ⚠ <strong>Fallback planning — not AI.</strong> Gemini was unavailable ({state.scores.note}), so selections use simple interest matching. Press Regenerate to try Gemini again.
+            ⚠ <strong>Fallback planning — not AI.</strong>{warn} No genuine Gemini result is available, so selections use simple interest matching.
           </div>
-        )
-      )}
+        );
+      })()}
 
       {!plan && state.status !== "loading" && (
         <div className="rounded-3xl border-2 border-dashed border-lav-300 bg-white p-10 text-center">

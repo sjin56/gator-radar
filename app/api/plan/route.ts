@@ -1,14 +1,28 @@
 import { NextResponse } from "next/server";
 import { addDays, laNow, mondayOf } from "@/lib/dates";
+import { runGemini } from "@/lib/gemini";
 import { buildOpportunities } from "@/lib/opportunities";
 import { buildPlanPrompt, fallbackPlanScores, validatePlanScores } from "@/lib/planAI";
 import { sanitizeProfile } from "@/lib/sanitize";
-import type { Discovery, Goal, PlanScores } from "@/lib/types";
+import type { Discovery, Goal, PlanScore, PlanScores } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-const MODELS = [process.env.GEMINI_MODEL || "gemini-3.8-flash", "gemini-3.5-flash", "gemini-3.1-flash-lite"];
+const SCHEMA = {
+  type: "OBJECT",
+  properties: {
+    items: {
+      type: "ARRAY",
+      items: {
+        type: "OBJECT",
+        properties: { id: { type: "STRING" }, score: { type: "INTEGER" }, reason: { type: "STRING" } },
+        required: ["id", "score", "reason"],
+      },
+    },
+  },
+  required: ["items"],
+};
 
 export async function POST(req: Request) {
   let body: Record<string, unknown>;
@@ -34,67 +48,17 @@ export async function POST(req: Request) {
   if (!key) return NextResponse.json(fallbackPlanScores(profile, opportunities, "GEMINI_API_KEY is not configured on the server."));
 
   const { system, user } = buildPlanPrompt({ profile, discovery, goal, caught, weekStart, today: now.date, opportunities });
-  const call = (model: string) =>
-    fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-goog-api-key": key },
-      signal: AbortSignal.timeout(20000),
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: system }] },
-        contents: [{ role: "user", parts: [{ text: user }] }],
-        generationConfig: {
-          temperature: 0.4,
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: "OBJECT",
-            properties: {
-              items: {
-                type: "ARRAY",
-                items: {
-                  type: "OBJECT",
-                  properties: { id: { type: "STRING" }, score: { type: "INTEGER" }, reason: { type: "STRING" } },
-                  required: ["id", "score", "reason"],
-                },
-              },
-            },
-            required: ["items"],
-          },
-        },
-      }),
-    });
-
-  let lastStatus = 0;
-  for (const model of [...new Set(MODELS)]) {
-    let res: Response;
-    try {
-      res = await call(model);
-    } catch {
-      lastStatus = 408;
-      console.error("Gemini plan timeout/network error, model:", model);
-      continue;
-    }
-    if (res.ok) {
-      try {
-        const data = await res.json();
-        const text: string | undefined = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-        const items = validatePlanScores(JSON.parse(text ?? "{}"), opportunities);
-        if (items.length >= Math.ceil(opportunities.length / 2)) {
-          const result: PlanScores = { source: "gemini", model, items };
-          return NextResponse.json(result);
-        }
-        lastStatus = 422;
-      } catch {
-        lastStatus = 422;
-      }
-      continue;
-    }
-    lastStatus = res.status;
-    console.error("Gemini plan HTTP", res.status, "model:", model);
-    if (res.status === 429) break;
+  const out = await runGemini<PlanScore[]>({
+    key, system, user, schema: SCHEMA, temperature: 0.4, timeoutMs: 20000,
+    cacheKey: JSON.stringify(["plan", profile, discovery, goal, weekStart, Object.entries(caught).sort()]),
+    parse: (raw) => {
+      const items = validatePlanScores(raw, opportunities);
+      return items.length >= Math.ceil(opportunities.length / 2) ? items : null;
+    },
+  });
+  if (out.ok) {
+    const result: PlanScores = { source: "gemini", model: out.model, items: out.data, capturedAt: out.capturedAt, shared: out.shared };
+    return NextResponse.json(result);
   }
-  const note =
-    lastStatus === 429
-      ? "Gemini free-tier rate limit reached. Wait a minute, then press Generate again."
-      : `Gemini was unavailable (code ${lastStatus}).`;
-  return NextResponse.json(fallbackPlanScores(profile, opportunities, note));
+  return NextResponse.json({ ...fallbackPlanScores(profile, opportunities, out.note), retryAfter: out.retryAfter, limit: out.limit });
 }
