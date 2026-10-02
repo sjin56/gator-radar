@@ -10,11 +10,13 @@ The builder almost missed the registration deadline for this very hackathon.
 
 **Beneficiaries:** SFSU students, especially those who are new to campus (transfer, first-year, international/exchange students).
 
+## Data: a curated real-listing pilot (Oct 5–16, 2026)
+All opportunities come from `data/realOpportunities.json`: 92 records manually transcribed from the Campus Rec Fall 2026 Group Fitness flyer, the SFSU Student Events Calendar PDF, GatorXperience screenshots and a few official pages. **This is a snapshot, not live crawling, and records are not individually verified.** Per-record `verificationStatus`, `schedulable`, `recommendationEligible` and `reviewFlags` are respected: unschedulable items are info-only and never placed as fixed blocks. Nothing (end time, URL, venue, eligibility) is invented. Every cache is prefixed with the dataset id `sfsu-real-opportunity-pilot-2026-10-05-to-16-v1`, so results computed on earlier data are never reused. No popularity numbers are shown.
+
 ## What it does
 - **Student Profile** – interests, goals, recurring classes/commitments (saved in the browser). A fictional demo student is prefilled.
 - **Discover** – Gemini ranks opportunities for the student and explains *why*; category/type filters; deadline urgency badges; schedule-conflict badges.
 - **My Catch** – save/remove, status (Saved → Planning to Apply → Applied), days remaining. Persists across refresh.
-- **Popular This Week** – community "catch" counts. Uses Firestore if configured; otherwise **clearly labeled illustrative demo numbers**.
 - **Week Wizard** – proactive AI weekly planner over the *whole* opportunity dataset (My Catch can be empty). Two independent controls: **Discovery Preference** (Prioritize My Catch / Balanced Discovery / Surprise Me!) and **Weekly Goal** (Career / Social / Balanced), plus commute minutes and activities-per-week. Gemini scores every opportunity; fixed rules pick, place and validate (official times never changed, commute buffers, max 2 activities/day, optional prep blocks before deadlines, reasons shown for any caught item left out).
 
 Events (attend at a set time) and applications (prepare before a deadline) are handled differently.
@@ -40,10 +42,6 @@ npm run dev                  # http://localhost:3000
 ```
 Never commit `.env.local`. 
 
-## Optional: shared catch counts (Firestore)
-Set `FIRESTORE_PROJECT_ID` and provide Google credentials (`gcloud auth application-default login` locally, or the runtime service account on Cloud Run).
-One document per (visitor, opportunity) guarantees repeated saves can't inflate counts; un-catching deactivates it.
-Counts are "catches" from anonymous browser IDs — **not unique students**.
 
 ## Data Privacy & Ethics
 - Profile, schedule and saved items are stored in the browser (localStorage) by default.
@@ -52,8 +50,8 @@ Counts are "catches" from anonymous browser IDs — **not unique students**.
 - No names or SFSU credentials are collected. AI can be wrong; always verify with the official source.
 
 ## Technologies actually implemented
-Next.js (App Router) · React · TypeScript · Tailwind CSS · Gemini API (REST, server-side) · localStorage · firebase-admin (Firestore code path, optional).
+Next.js (App Router) · React · TypeScript · Tailwind CSS · Gemini API (REST, server-side) · localStorage · Vercel.
 
 ## Honest status
-- All opportunities are **demo records** (fictional, not verified, no source URLs). No scraping is implemented.
-- Future work: ingest real GatorXperience / department / Instagram sources with verification, SFSU SSO, official class-schedule import, reminders.
+- Real-listing pilot is a manual snapshot for Oct 5–16, 2026 (see Data). No scraping, Firestore or authentication is implemented.
+- Future: automated source aggregation with verification, community submissions, real catch counts, SSO/class-schedule import, reminders, manual week editing.
